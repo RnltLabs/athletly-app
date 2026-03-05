@@ -104,8 +104,8 @@ export function ChatInput({
 
   return (
     <View
-      className="bg-surface border-t border-border/50 px-4 pt-2"
-      style={{ paddingBottom: Math.max(insets.bottom, 8) }}
+      className="bg-white px-4 pt-2"
+      style={{ paddingBottom: Math.max(insets.bottom, 8), shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 }}
     >
       <View className="flex-row items-end gap-2">
         {/* Mic button */}
@@ -128,8 +128,8 @@ export function ChatInput({
 
         {/* Text input */}
         <View
-          className="flex-1 bg-surface-elevated rounded-2xl px-4 py-2 justify-center"
-          style={{ minHeight: 40, maxHeight: MAX_INPUT_HEIGHT }}
+          className="flex-1 rounded-2xl px-4 py-2 justify-center"
+          style={{ backgroundColor: '#F5F6F8', minHeight: 40, maxHeight: MAX_INPUT_HEIGHT }}
         >
           <TextInput
             ref={inputRef}

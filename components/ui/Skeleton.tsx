@@ -8,18 +8,18 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width, height, borderRadius = 12 }: SkeletonProps) {
-  const opacity = useRef(new Animated.Value(0.3)).current;
+  const opacity = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(opacity, {
-          toValue: 0.7,
+          toValue: 0.8,
           duration: 750,
           useNativeDriver: true,
         }),
         Animated.timing(opacity, {
-          toValue: 0.3,
+          toValue: 0.4,
           duration: 750,
           useNativeDriver: true,
         }),
@@ -31,8 +31,7 @@ export function Skeleton({ width, height, borderRadius = 12 }: SkeletonProps) {
 
   return (
     <Animated.View
-      className="bg-surface-elevated"
-      style={{ width, height, borderRadius, opacity }}
+      style={{ width, height, borderRadius, opacity, backgroundColor: '#E8EBF0' }}
     />
   );
 }

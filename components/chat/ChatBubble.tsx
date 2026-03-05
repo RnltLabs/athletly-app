@@ -31,7 +31,7 @@ function ToolCallBadges({ toolCalls }: { toolCalls: string[] }) {
       {toolCalls.map((tool, index) => (
         <View
           key={`${tool}-${index}`}
-          className="flex-row items-center bg-surface-elevated rounded-full px-2.5 py-1"
+          className="flex-row items-center bg-surface-nested rounded-full px-2.5 py-1"
         >
           <Wrench size={10} color={Colors.textMuted} strokeWidth={2} />
           <Text className="text-text-muted text-[10px] ml-1">{tool}</Text>
@@ -44,7 +44,7 @@ function ToolCallBadges({ toolCalls }: { toolCalls: string[] }) {
 function AssistantBubble({ message }: { message: ChatMessage }) {
   return (
     <View className="self-start max-w-[85%] mb-3">
-      <View className="bg-surface rounded-2xl rounded-tl-sm px-4 py-3">
+      <View className="rounded-2xl rounded-tl-sm px-4 py-3" style={{ backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2 }}>
         <Text className="text-text-primary text-base leading-6">
           {message.content}
         </Text>

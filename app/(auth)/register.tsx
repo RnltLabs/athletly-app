@@ -15,6 +15,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/Toast';
@@ -53,15 +54,15 @@ function PasswordStrengthIndicator({ password }: { password: string }) {
         <View className="flex-1 flex-row gap-1">
           <View
             className="flex-1 h-1 rounded-full"
-            style={{ backgroundColor: strength.progress >= 0.33 ? strength.color : Colors.surfaceElevated }}
+            style={{ backgroundColor: strength.progress >= 0.33 ? strength.color : Colors.surfaceMuted }}
           />
           <View
             className="flex-1 h-1 rounded-full"
-            style={{ backgroundColor: strength.progress >= 0.66 ? strength.color : Colors.surfaceElevated }}
+            style={{ backgroundColor: strength.progress >= 0.66 ? strength.color : Colors.surfaceMuted }}
           />
           <View
             className="flex-1 h-1 rounded-full"
-            style={{ backgroundColor: strength.progress >= 1 ? strength.color : Colors.surfaceElevated }}
+            style={{ backgroundColor: strength.progress >= 1 ? strength.color : Colors.surfaceMuted }}
           />
         </View>
         <Text className="text-xs" style={{ color: strength.color }}>
@@ -111,100 +112,118 @@ export default function RegisterScreen() {
   }, [router]);
 
   return (
-    <SafeAreaView className="flex-1 bg-background">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <View className="flex-1" style={{ backgroundColor: Colors.background }}>
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '45%' }}
+      />
+      <SafeAreaView className="flex-1">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
         >
-          <View className="px-6">
-            {/* Logo */}
-            <View className="items-center mb-8">
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Logo on gradient */}
+            <View className="items-center mb-8 pt-4">
               <View
                 className="w-20 h-20 rounded-[20px] items-center justify-center mb-4"
-                style={{ backgroundColor: Colors.primary }}
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
               >
                 <Text className="text-white text-4xl font-bold">A</Text>
               </View>
-              <Text className="text-text-primary text-3xl font-bold">
+              <Text className="text-white text-3xl font-bold">
                 Athletly
               </Text>
-              <Text className="text-text-secondary text-sm mt-1">
+              <Text className="text-white/80 text-sm mt-1">
                 Dein AI Fitness Coach
               </Text>
             </View>
 
-            {/* Heading */}
-            <Text className="text-text-primary text-xl font-semibold mb-6">
-              Konto erstellen
-            </Text>
+            {/* White card for form */}
+            <View
+              className="bg-white rounded-t-3xl flex-1 px-6 pt-8"
+              style={{
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
+                elevation: 4,
+              }}
+            >
+              {/* Heading */}
+              <Text className="text-text-primary text-xl font-semibold mb-6">
+                Konto erstellen
+              </Text>
 
-            {/* Error banner */}
-            {error && (
-              <View className="bg-error/10 border border-error/30 rounded-xl px-4 py-3 mb-4">
-                <Text className="text-error text-sm">{error}</Text>
+              {/* Error banner */}
+              {error && (
+                <View className="bg-error/10 border border-error/30 rounded-xl px-4 py-3 mb-4">
+                  <Text className="text-error text-sm">{error}</Text>
+                </View>
+              )}
+
+              {/* Email input */}
+              <View className="mb-4">
+                <Input
+                  label="E-Mail"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="name@beispiel.de"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="email"
+                  returnKeyType="next"
+                  editable={!isLoading}
+                />
               </View>
-            )}
 
-            {/* Email input */}
-            <View className="mb-4">
-              <Input
-                label="E-Mail"
-                value={email}
-                onChangeText={setEmail}
-                placeholder="name@beispiel.de"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
-                returnKeyType="next"
-                editable={!isLoading}
+              {/* Password input + strength */}
+              <View className="mb-6">
+                <Input
+                  label="Passwort"
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="Mindestens 6 Zeichen"
+                  isPassword
+                  autoCapitalize="none"
+                  autoComplete="new-password"
+                  returnKeyType="done"
+                  editable={!isLoading}
+                  onSubmitEditing={handleSignUp}
+                />
+                <PasswordStrengthIndicator password={password} />
+              </View>
+
+              {/* Sign up button */}
+              <Button
+                variant="primary"
+                size="lg"
+                label="Registrieren"
+                onPress={handleSignUp}
+                loading={isLoading}
+                disabled={isLoading}
               />
-            </View>
 
-            {/* Password input + strength */}
-            <View className="mb-6">
-              <Input
-                label="Passwort"
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Mindestens 6 Zeichen"
-                isPassword
-                autoCapitalize="none"
-                autoComplete="new-password"
-                returnKeyType="done"
-                editable={!isLoading}
-                onSubmitEditing={handleSignUp}
-              />
-              <PasswordStrengthIndicator password={password} />
+              {/* Link to login */}
+              <View className="items-center mt-6">
+                <Pressable onPress={navigateToLogin}>
+                  <Text className="text-text-secondary text-sm">
+                    Bereits ein Konto?{' '}
+                    <Text className="text-primary font-medium">Anmelden</Text>
+                  </Text>
+                </Pressable>
+              </View>
             </View>
-
-            {/* Sign up button */}
-            <Button
-              variant="primary"
-              size="lg"
-              label="Registrieren"
-              onPress={handleSignUp}
-              loading={isLoading}
-              disabled={isLoading}
-            />
-
-            {/* Link to login */}
-            <View className="items-center mt-6">
-              <Pressable onPress={navigateToLogin}>
-                <Text className="text-text-secondary text-sm">
-                  Bereits ein Konto?{' '}
-                  <Text className="text-primary font-medium">Anmelden</Text>
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }

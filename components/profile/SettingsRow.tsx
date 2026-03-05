@@ -33,7 +33,7 @@ export function SettingsRow({
 }: SettingsRowProps) {
   const labelColor = isDestructive ? 'text-error' : 'text-text-primary';
   const iconColor = isDestructive ? Colors.error : Colors.textSecondary;
-  const borderClass = isLast ? '' : 'border-b border-border/30';
+  const borderClass = isLast ? '' : 'border-b border-divider';
 
   const content = (
     <View className={`flex-row items-center py-3.5 px-4 ${borderClass}`}>

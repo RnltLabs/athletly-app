@@ -77,7 +77,7 @@ export function GarminConnectModal({ visible, onClose, onSuccess }: GarminConnec
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <Pressable
-            className="bg-surface-elevated rounded-2xl p-6 mx-6 w-80"
+            className="bg-white rounded-2xl p-6 mx-6 w-80"
             onPress={() => {}}
           >
             <View className="flex-row items-center justify-between mb-5">

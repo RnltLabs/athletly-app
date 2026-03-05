@@ -28,17 +28,17 @@ interface IntensityBadgeProps extends BadgeBaseProps {
 type BadgeProps = SportBadgeProps | StatusBadgeProps | IntensityBadgeProps;
 
 const STATUS_COLORS: Record<StatusLevel, string> = {
-  success: '#34D399',
-  warning: '#FBBF24',
-  error: '#F87171',
+  success: '#22C55E',
+  warning: '#F59E0B',
+  error: '#EF4444',
 };
 
 const INTENSITY_COLORS: Record<IntensityLevel, string> = {
-  easy: '#34D399',
-  moderate: '#3B82F6',
-  hard: '#FBBF24',
-  max: '#F87171',
-  recovery: '#6B7280',
+  easy: '#22C55E',
+  moderate: '#2563EB',
+  hard: '#F59E0B',
+  max: '#EF4444',
+  recovery: '#94A3B8',
 };
 
 function getColorForBadge(props: BadgeProps): string {

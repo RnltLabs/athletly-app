@@ -64,7 +64,7 @@ export function ServiceStatus({
           {isConnected ? (
             <Badge type="status" status="success" label="Verbunden" />
           ) : (
-            <View className="rounded-full px-3 py-1" style={{ backgroundColor: '#71717A15' }}>
+            <View className="rounded-full px-3 py-1" style={{ backgroundColor: '#94A3B815' }}>
               <Text className="text-xs font-semibold text-text-muted">
                 Nicht verbunden
               </Text>

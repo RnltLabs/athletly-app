@@ -3,7 +3,7 @@
  *
  * Bottom tab navigation with 4 tabs:
  * Today (Home), Plan, Coach, Profil.
- * Dark theme, OLED-optimized.
+ * Light HubFit-inspired theme.
  * Wrapped in ErrorBoundary for graceful crash handling.
  */
 
@@ -13,9 +13,13 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Colors } from '@/lib/colors';
 
 const TAB_BAR_STYLE = {
-  backgroundColor: Colors.background,
-  borderTopColor: Colors.border,
-  borderTopWidth: 0.5,
+  backgroundColor: '#FFFFFF',
+  borderTopWidth: 0,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: -1 },
+  shadowOpacity: 0.04,
+  shadowRadius: 4,
+  elevation: 3,
 } as const;
 
 const TAB_BAR_LABEL_STYLE = {
@@ -30,7 +34,7 @@ export default function TabLayout() {
           headerShown: false,
           tabBarStyle: TAB_BAR_STYLE,
           tabBarActiveTintColor: Colors.primary,
-          tabBarInactiveTintColor: Colors.textMuted,
+          tabBarInactiveTintColor: Colors.tabInactive,
           tabBarLabelStyle: TAB_BAR_LABEL_STYLE,
         }}
       >

@@ -20,9 +20,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MessageCircle } from 'lucide-react-native';
-import { Colors } from '@/lib/colors';
+import { GradientHeader } from '@/components/ui/GradientHeader';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
 import { useChatStream } from '@/hooks/useChatStream';
@@ -175,21 +173,21 @@ export default function CoachScreen() {
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+    <View className="flex-1 bg-background">
+      <GradientHeader
+        title="Coach"
+        rightContent={
+          <View className="flex-row items-center gap-1.5">
+            <View className="w-2 h-2 rounded-full bg-success" />
+            <Text className="text-white text-xs font-medium">Online</Text>
+          </View>
+        }
+      />
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
-        {/* Header */}
-        <View className="px-4 py-3 flex-row items-center gap-3">
-          <MessageCircle size={24} color={Colors.primary} strokeWidth={2} />
-          <Text className="text-text-primary text-xl font-bold">Coach</Text>
-          <View className="flex-row items-center ml-auto gap-1.5">
-            <View className="w-2 h-2 rounded-full bg-success" />
-            <Text className="text-text-muted text-xs">Online</Text>
-          </View>
-        </View>
 
         {/* Message list (inverted) */}
         <FlatList
@@ -226,6 +224,6 @@ export default function CoachScreen() {
           disabled={isStreaming}
         />
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }

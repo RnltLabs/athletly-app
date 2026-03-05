@@ -7,7 +7,8 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { GradientHeader } from '@/components/ui/GradientHeader';
+import { Colors } from '@/lib/colors';
 import {
   Watch,
   Smartphone,
@@ -152,12 +153,8 @@ export default function ProfileScreen() {
   }, [signOut]);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background">
-      <View className="px-4 pt-2 pb-2">
-        <Text className="text-text-primary text-2xl font-bold">
-          Profil
-        </Text>
-      </View>
+    <View className="flex-1 bg-background">
+      <GradientHeader title="Profil" />
 
       <ScrollView
         className="flex-1"
@@ -179,7 +176,7 @@ export default function ProfileScreen() {
             onDisconnect={handleGarminDisconnect}
             isLoading={garminLoading}
           />
-          <View className="h-px bg-border/30 ml-14" />
+          <View className="h-px ml-14" style={{ backgroundColor: Colors.divider }} />
           <ServiceStatus
             name="Apple Health"
             icon={Smartphone}
@@ -245,7 +242,7 @@ export default function ProfileScreen() {
         onClose={() => setShowGarminModal(false)}
         onSuccess={handleGarminConnected}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 

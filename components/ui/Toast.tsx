@@ -40,10 +40,10 @@ const ICON_MAP: Record<ToastType, LucideIcon> = {
 };
 
 const COLOR_MAP: Record<ToastType, string> = {
-  success: '#34D399',
-  error: '#F87171',
-  warning: '#FBBF24',
-  info: '#3B82F6',
+  success: '#22C55E',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  info: '#2563EB',
 };
 
 const AUTO_DISMISS_MS = 3000;
@@ -72,21 +72,29 @@ function ToastItem({ toast, onDismiss }: { toast: ToastMessage; onDismiss: () =>
 
   return (
     <Animated.View
-      className="bg-surface-elevated border border-border rounded-xl px-4 py-3.5 mx-4 mb-2 flex-row items-center"
+      className="rounded-xl px-4 py-3.5 mx-4 mb-2 flex-row items-center"
       style={[
-        { transform: [{ translateY }], opacity },
-        { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12 },
+        {
+          backgroundColor: '#0F172A',
+          transform: [{ translateY }],
+          opacity,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 12,
+          elevation: 6,
+        },
       ]}
     >
       <Icon size={20} color={color} strokeWidth={2} />
-      <Text className="text-text-primary text-sm flex-1 ml-3">{toast.message}</Text>
+      <Text className="text-sm flex-1 ml-3" style={{ color: '#FFFFFF' }}>{toast.message}</Text>
       {toast.action && (
         <Pressable onPress={toast.action.onPress} className="ml-2">
-          <Text className="text-primary text-sm font-medium">{toast.action.label}</Text>
+          <Text className="text-sm font-medium" style={{ color: '#2563EB' }}>{toast.action.label}</Text>
         </Pressable>
       )}
       <Pressable onPress={onDismiss} className="ml-2 p-1">
-        <X size={16} color="#71717A" strokeWidth={2} />
+        <X size={16} color="#94A3B8" strokeWidth={2} />
       </Pressable>
     </Animated.View>
   );

@@ -20,7 +20,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <View className="flex-1 items-center justify-center px-8 py-8">
-      <Icon size={48} color="#71717A" strokeWidth={1.5} />
+      <Icon size={48} color="#94A3B8" strokeWidth={1.5} />
       <Text className="text-text-primary text-lg font-semibold mt-4 text-center">
         {title}
       </Text>

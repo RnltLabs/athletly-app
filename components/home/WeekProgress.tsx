@@ -65,7 +65,7 @@ export function WeekProgress({ sessions, totalPlanned }: WeekProgressProps) {
         {DAY_LABELS.map((label, index) => {
           const status = dayStatuses[index];
           const dotColor = status.isRestDay
-            ? Colors.surfaceElevated
+            ? Colors.surfaceMuted
             : status.completed
               ? getSportColor(status.sport)
               : `${getSportColor(status.sport)}40`;

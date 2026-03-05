@@ -40,7 +40,7 @@ export function ProfileHeader({ email, createdAt }: ProfileHeaderProps) {
 
   return (
     <View className="items-center py-6 px-4">
-      <View className="w-20 h-20 rounded-full bg-surface-elevated items-center justify-center mb-3">
+      <View className="w-20 h-20 rounded-full items-center justify-center mb-3" style={{ backgroundColor: '#F5F6F8' }}>
         <Text className="text-primary text-3xl font-bold">
           {initial}
         </Text>

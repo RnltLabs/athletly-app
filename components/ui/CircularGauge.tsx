@@ -15,7 +15,7 @@ export function CircularGauge({
   value,
   size = 120,
   strokeWidth = 8,
-  color = '#3B82F6',
+  color = '#2563EB',
   label,
   unit,
 }: CircularGaugeProps) {
@@ -32,7 +32,7 @@ export function CircularGauge({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke="#27272A"
+          stroke="#E2E8F0"
           strokeWidth={strokeWidth}
           fill="none"
         />
@@ -53,12 +53,12 @@ export function CircularGauge({
       </Svg>
       {/* Center content */}
       <View className="absolute items-center justify-center">
-        <Text className="text-text-primary font-bold text-2xl" style={{ letterSpacing: -0.5 }}>
+        <Text className="font-bold text-2xl" style={{ color: '#0F172A', letterSpacing: -0.5 }}>
           {Math.round(clampedValue)}
-          {unit && <Text className="text-text-secondary text-sm font-medium">{unit}</Text>}
+          {unit && <Text className="text-sm font-medium" style={{ color: '#475569' }}>{unit}</Text>}
         </Text>
         {label && (
-          <Text className="text-text-secondary text-xs font-medium mt-0.5">{label}</Text>
+          <Text className="text-xs font-medium mt-0.5" style={{ color: '#475569' }}>{label}</Text>
         )}
       </View>
     </View>

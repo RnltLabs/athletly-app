@@ -7,3 +7,6 @@ export { Skeleton } from './Skeleton';
 export { ProgressBar } from './ProgressBar';
 export { CircularGauge } from './CircularGauge';
 export { EmptyState } from './EmptyState';
+export { GradientHeader } from './GradientHeader';
+export { StatCard } from './StatCard';
+export { SuccessBanner } from './SuccessBanner';

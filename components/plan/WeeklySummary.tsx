@@ -79,7 +79,7 @@ export function WeeklySummary({ plan }: WeeklySummaryProps) {
       </View>
 
       {/* Total stats */}
-      <View className="border-t border-border/30 pt-3 mb-3">
+      <View className="border-t border-divider pt-3 mb-3">
         <Text className="text-text-primary text-sm font-medium">
           {totalSessions} Einheiten · {formatTotalDuration(totalDuration)}
         </Text>
@@ -87,7 +87,7 @@ export function WeeklySummary({ plan }: WeeklySummaryProps) {
 
       {/* Coach note */}
       {plan.coachNote ? (
-        <View className="flex-row items-start gap-2 bg-surface-elevated/50 rounded-lg p-3">
+        <View className="flex-row items-start gap-2 rounded-lg p-3" style={{ backgroundColor: '#F5F6F8' }}>
           <MessageCircle size={14} color={Colors.textMuted} strokeWidth={2} />
           <Text className="text-text-secondary text-sm italic flex-1 leading-5">
             {plan.coachNote}

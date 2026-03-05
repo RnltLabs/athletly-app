@@ -2,7 +2,7 @@
  * RestDayCard — Card displayed for rest/recovery days
  *
  * Shows a calming moon icon with a recovery message.
- * Uses the glass card variant for a subtle, muted appearance.
+ * Uses the nested card variant for a subtle, muted appearance.
  */
 
 import React from 'react';
@@ -17,7 +17,7 @@ interface RestDayCardProps {
 
 export function RestDayCard({ message }: RestDayCardProps) {
   return (
-    <Card variant="glass" className="mb-3 items-center py-8">
+    <Card variant="nested" className="mb-3 items-center py-8">
       <Moon size={40} color={Colors.textMuted} strokeWidth={1.5} />
 
       <Text className="text-text-primary text-lg font-semibold mt-4">

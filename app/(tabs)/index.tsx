@@ -9,8 +9,8 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Calendar, Moon, Heart, Activity } from 'lucide-react-native';
+import { GradientHeader } from '@/components/ui/GradientHeader';
 import { useAuthStore } from '@/store/authStore';
 import { usePlanStore } from '@/store/planStore';
 import { useHealthStore } from '@/store/healthStore';
@@ -112,10 +112,20 @@ export default function TodayScreen() {
   const userName = user?.user_metadata?.name ?? user?.email?.split('@')[0] ?? '';
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
+      <GradientHeader
+        title={`${greeting}${userName ? `, ${userName}` : ''}`}
+        subtitle={dateString}
+        rightContent={
+          !isLoading && !hasNoplan && metrics?.recoveryScore !== undefined
+            ? <RecoveryGauge score={metrics.recoveryScore} />
+            : undefined
+        }
+      />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingTop: 0 }}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -124,13 +134,6 @@ export default function TodayScreen() {
           />
         }
       >
-        {/* 1. Greeting Header */}
-        <View className="px-4 pt-2 pb-1">
-          <Text className="text-text-primary text-3xl font-bold" style={{ letterSpacing: -0.5 }}>
-            {greeting}{userName ? `, ${userName}` : ''}
-          </Text>
-          <Text className="text-text-secondary text-sm mt-1">{dateString}</Text>
-        </View>
 
         {/* Loading state */}
         {isLoading && <LoadingSkeleton />}
@@ -151,12 +154,7 @@ export default function TodayScreen() {
         {/* Has plan / data state */}
         {!isLoading && !hasNoplan && (
           <>
-            {/* 2. Recovery Gauge */}
-            <View className="mt-4">
-              <RecoveryGauge score={metrics?.recoveryScore} />
-            </View>
-
-            {/* 3. Metric Mini Cards */}
+            {/* 2. Metric Mini Cards */}
             <View className="flex-row gap-3 px-4 mt-4">
               <MetricMiniCard
                 icon={Moon}
@@ -202,7 +200,7 @@ export default function TodayScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

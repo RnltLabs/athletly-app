@@ -6,7 +6,7 @@ export const SportColors: Record<string, string> = {
   strength: '#F59E0B',  // amber (alias)
   yoga: '#EC4899',      // pink
   hiking: '#22C55E',    // green
-  rest: '#6B7280',      // gray
+  rest: '#94A3B8',      // light slate gray
   default: '#3B82F6',   // blue fallback
 };
 

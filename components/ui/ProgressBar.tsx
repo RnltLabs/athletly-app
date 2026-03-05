@@ -26,11 +26,11 @@ export function ProgressBar({ progress, color, height = 6 }: ProgressBarProps) {
   }, [clampedProgress, animatedWidth]);
 
   return (
-    <View className={`w-full bg-surface-elevated rounded-full ${heightClasses[height]}`}>
+    <View className={`w-full bg-surface-muted rounded-full ${heightClasses[height]}`}>
       <Animated.View
         className={`${heightClasses[height]} rounded-full`}
         style={[
-          { backgroundColor: color ?? '#3B82F6' },
+          { backgroundColor: color ?? '#2563EB' },
           {
             width: animatedWidth.interpolate({
               inputRange: [0, 1],

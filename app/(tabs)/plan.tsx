@@ -8,7 +8,6 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react-native';
 import { usePlanStore } from '@/store/planStore';
@@ -17,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Colors } from '@/lib/colors';
+import { GradientHeader } from '@/components/ui/GradientHeader';
 import { WeekStrip } from '@/components/plan/WeekStrip';
 import { SessionCard } from '@/components/plan/SessionCard';
 import { RestDayCard } from '@/components/plan/RestDayCard';
@@ -153,7 +153,8 @@ export default function PlanScreen() {
   }, [router]);
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1" style={{ backgroundColor: Colors.background }}>
+    <View className="flex-1 bg-background">
+      <GradientHeader title="Trainingsplan" />
       <ScrollView
         className="flex-1"
         showsVerticalScrollIndicator={false}
@@ -166,12 +167,6 @@ export default function PlanScreen() {
           />
         }
       >
-        {/* Header */}
-        <View className="px-4 pt-4 pb-2">
-          <Text className="text-text-primary text-[28px] font-bold" style={{ letterSpacing: -0.3 }}>
-            Trainingsplan
-          </Text>
-        </View>
 
         {/* Week Navigation */}
         <View className="flex-row items-center justify-between px-4 py-2">
@@ -246,6 +241,6 @@ export default function PlanScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }

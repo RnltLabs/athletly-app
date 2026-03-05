@@ -2,7 +2,7 @@
  * Onboarding Layout — Athletly V2
  *
  * Stack layout for the chat-based onboarding flow.
- * No headers, no back navigation, dark background.
+ * No headers, no back navigation, light background.
  */
 
 import { Stack } from 'expo-router';

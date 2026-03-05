@@ -124,7 +124,7 @@ function WorkoutCard({
 
       {/* Coach note */}
       {session.coachNote && (
-        <View className="bg-surface-elevated rounded-xl p-3 mb-4">
+        <View className="bg-surface-nested rounded-xl p-3 mb-4">
           <Text className="text-text-secondary text-sm italic leading-5">
             {session.coachNote}
           </Text>

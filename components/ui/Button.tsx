@@ -17,19 +17,19 @@ interface ButtonProps {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: 'bg-primary rounded-xl',
-  secondary: 'bg-surface-elevated border border-border rounded-xl',
-  ghost: 'bg-transparent rounded-xl',
-  destructive: 'bg-error/10 rounded-xl',
-  icon: 'rounded-full items-center justify-center',
+  primary: 'rounded-[14px]',
+  secondary: 'bg-white rounded-[14px]',
+  ghost: 'bg-transparent rounded-[14px]',
+  destructive: 'rounded-[14px]',
+  icon: 'rounded-xl items-center justify-center',
 };
 
 const variantTextClasses: Record<ButtonVariant, string> = {
   primary: 'text-white font-semibold',
-  secondary: 'text-text-primary font-medium',
-  ghost: 'text-text-secondary font-medium',
-  destructive: 'text-error font-semibold',
-  icon: 'text-text-primary',
+  secondary: 'font-medium',
+  ghost: 'font-medium',
+  destructive: 'font-semibold',
+  icon: '',
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
@@ -51,6 +51,46 @@ const iconOnlySizeClasses: Record<ButtonSize, string> = {
   lg: 'h-[52px] w-[52px]',
 };
 
+const ICON_COLORS: Record<ButtonVariant, string> = {
+  primary: '#FFFFFF',
+  secondary: '#0F172A',
+  ghost: '#2563EB',
+  destructive: '#EF4444',
+  icon: '#475569',
+};
+
+const TEXT_COLORS: Record<ButtonVariant, string> = {
+  primary: '#FFFFFF',
+  secondary: '#0F172A',
+  ghost: '#2563EB',
+  destructive: '#EF4444',
+  icon: '#475569',
+};
+
+const VARIANT_STYLES: Record<ButtonVariant, Record<string, unknown>> = {
+  primary: {
+    backgroundColor: '#1E293B',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  secondary: {
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  ghost: {},
+  destructive: {
+    backgroundColor: '#FEE2E2',
+  },
+  icon: {
+    backgroundColor: '#F5F6F8',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+};
+
 export function Button({
   variant = 'primary',
   size = 'md',
@@ -63,11 +103,7 @@ export function Button({
 }: ButtonProps) {
   const isIcon = variant === 'icon';
   const iconSize = iconSizeMap[size];
-  const iconColor =
-    variant === 'primary' ? '#FFFFFF' :
-    variant === 'destructive' ? '#F87171' :
-    variant === 'ghost' ? '#A1A1AA' :
-    '#FAFAFA';
+  const iconColor = ICON_COLORS[variant];
 
   return (
     <Pressable
@@ -79,7 +115,10 @@ export function Button({
         ${variantClasses[variant]}
         ${disabled ? 'opacity-50' : ''}
       `}
-      style={({ pressed }) => ({ opacity: pressed && !disabled ? 0.8 : disabled ? 0.5 : 1 })}
+      style={({ pressed }) => [
+        VARIANT_STYLES[variant],
+        { opacity: pressed && !disabled ? 0.8 : disabled ? 0.5 : 1 },
+      ]}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       accessibilityLabel={label}
@@ -92,7 +131,10 @@ export function Button({
             <Icon size={iconSize} color={iconColor} strokeWidth={2} />
           )}
           {label && !isIcon && (
-            <Text className={`${variantTextClasses[variant]} ${textSizeMap[size]}`}>
+            <Text
+              className={`${variantTextClasses[variant]} ${textSizeMap[size]}`}
+              style={{ color: TEXT_COLORS[variant] }}
+            >
               {label}
             </Text>
           )}

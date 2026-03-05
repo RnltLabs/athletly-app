@@ -2,7 +2,7 @@
  * Auth Layout — Athletly V2
  *
  * Stack layout for login and register screens.
- * No headers, dark background.
+ * No headers, light background.
  */
 
 import { Stack } from 'expo-router';

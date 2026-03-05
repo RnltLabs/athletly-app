@@ -77,7 +77,7 @@ export default function RootLayout() {
     return (
       <SafeAreaProvider>
         <LoadingScreen />
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
       </SafeAreaProvider>
     );
   }
@@ -88,7 +88,7 @@ export default function RootLayout() {
         <ErrorBoundary>
           <Stack screenOptions={{ headerShown: false }} />
         </ErrorBoundary>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
       </ToastProvider>
     </SafeAreaProvider>
   );

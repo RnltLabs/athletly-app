@@ -25,6 +25,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Mic, MicOff, Send } from 'lucide-react-native';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { useOnboardingStore } from '@/store/onboardingStore';
@@ -69,6 +70,13 @@ function ChatBubble({ message }: { message: ChatMessage }) {
         }`}
         style={{
           backgroundColor: isUser ? Colors.primary : Colors.surface,
+          ...(isUser ? {} : {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 1 },
+            shadowOpacity: 0.06,
+            shadowRadius: 4,
+            elevation: 2,
+          }),
         }}
       >
         <Text
@@ -88,7 +96,14 @@ function ThinkingIndicator({ status }: { status: string }) {
     <View className="self-start mb-3 max-w-[85%]">
       <View
         className="rounded-2xl rounded-bl-md px-4 py-3"
-        style={{ backgroundColor: Colors.surface }}
+        style={{
+          backgroundColor: Colors.surface,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.06,
+          shadowRadius: 4,
+          elevation: 2,
+        }}
       >
         <Text className="text-text-secondary text-sm">{status}</Text>
       </View>
@@ -113,7 +128,7 @@ function QuickReplies({
         <Pressable
           key={reply}
           onPress={() => onSelect(reply)}
-          className="bg-surface-elevated border border-border rounded-full px-4 py-2 mr-2"
+          className="bg-surface-nested border border-divider rounded-full px-4 py-2 mr-2"
         >
           <Text className="text-text-primary text-sm">{reply}</Text>
         </Pressable>
@@ -288,102 +303,110 @@ export default function OnboardingScreen() {
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-background" edges={['top', 'left', 'right']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
-        {/* Progress bar */}
-        <View className="px-4 pt-2 pb-1">
-          <ProgressBar
-            progress={estimateProgress(messages.length)}
-            height={4}
-          />
-        </View>
-
-        {/* Chat messages */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={keyExtractor}
-          inverted
-          contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={
-            isStreaming && streamProgress ? (
-              <ThinkingIndicator status={streamProgress.status} />
-            ) : null
-          }
-        />
-
-        {/* Stream error */}
-        {streamError && (
-          <View className="mx-4 mb-2 bg-error/10 border border-error/30 rounded-xl px-4 py-2">
-            <Text className="text-error text-sm">{streamError}</Text>
+    <View className="flex-1" style={{ backgroundColor: Colors.background }}>
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4 }}
+      />
+      <SafeAreaView className="flex-1" edges={['top', 'left', 'right']}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="flex-1"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        >
+          {/* Progress bar */}
+          <View className="px-4 pt-2 pb-1">
+            <ProgressBar
+              progress={estimateProgress(messages.length)}
+              height={4}
+            />
           </View>
-        )}
 
-        {/* Quick reply chips */}
-        {quickReplies.length > 0 && !isStreaming && (
-          <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
-        )}
+          {/* Chat messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={keyExtractor}
+            inverted
+            contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            ListHeaderComponent={
+              isStreaming && streamProgress ? (
+                <ThinkingIndicator status={streamProgress.status} />
+              ) : null
+            }
+          />
 
-        {/* Input bar */}
-        <View className="flex-row items-end px-4 py-3 gap-2 border-t border-border">
-          {/* Voice button */}
-          {voiceAvailable && (
-            <Pressable
-              onPress={handleVoicePress}
-              className="w-11 h-11 rounded-full items-center justify-center"
-              style={{
-                backgroundColor: isListening ? Colors.error : Colors.surfaceElevated,
-              }}
-            >
-              {isListening ? (
-                <MicOff size={20} color="#FAFAFA" strokeWidth={2} />
-              ) : (
-                <Mic size={20} color="#A1A1AA" strokeWidth={2} />
-              )}
-            </Pressable>
+          {/* Stream error */}
+          {streamError && (
+            <View className="mx-4 mb-2 bg-error/10 border border-error/30 rounded-xl px-4 py-2">
+              <Text className="text-error text-sm">{streamError}</Text>
+            </View>
           )}
 
-          {/* Text input */}
-          <View className="flex-1 bg-surface border border-border rounded-xl px-4 min-h-[44px] justify-center">
-            <TextInput
-              value={inputText}
-              onChangeText={setInputText}
-              placeholder="Nachricht schreiben..."
-              placeholderTextColor={Colors.textMuted}
-              className="text-text-primary text-base py-2.5"
-              multiline
-              maxLength={2000}
-              editable={!isStreaming}
-              returnKeyType="send"
-              blurOnSubmit
-              onSubmitEditing={handleSend}
-            />
-          </View>
+          {/* Quick reply chips */}
+          {quickReplies.length > 0 && !isStreaming && (
+            <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
+          )}
 
-          {/* Send button */}
-          <Pressable
-            onPress={handleSend}
-            disabled={!canSend}
-            className="w-11 h-11 rounded-full items-center justify-center"
-            style={{
-              backgroundColor: canSend ? Colors.primary : Colors.surfaceElevated,
-            }}
-          >
-            <Send
-              size={20}
-              color={canSend ? '#FFFFFF' : Colors.textMuted}
-              strokeWidth={2}
-            />
-          </Pressable>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          {/* Input bar */}
+          <View className="flex-row items-end px-4 py-3 gap-2 border-t border-divider">
+            {/* Voice button */}
+            {voiceAvailable && (
+              <Pressable
+                onPress={handleVoicePress}
+                className="w-11 h-11 rounded-full items-center justify-center"
+                style={{
+                  backgroundColor: isListening ? Colors.error : Colors.surfaceMuted,
+                }}
+              >
+                {isListening ? (
+                  <MicOff size={20} color="#FFFFFF" strokeWidth={2} />
+                ) : (
+                  <Mic size={20} color="#94A3B8" strokeWidth={2} />
+                )}
+              </Pressable>
+            )}
+
+            {/* Text input */}
+            <View className="flex-1 bg-white border border-divider rounded-xl px-4 min-h-[44px] justify-center">
+              <TextInput
+                value={inputText}
+                onChangeText={setInputText}
+                placeholder="Nachricht schreiben..."
+                placeholderTextColor={Colors.textMuted}
+                className="text-text-primary text-base py-2.5"
+                multiline
+                maxLength={2000}
+                editable={!isStreaming}
+                returnKeyType="send"
+                blurOnSubmit
+                onSubmitEditing={handleSend}
+              />
+            </View>
+
+            {/* Send button */}
+            <Pressable
+              onPress={handleSend}
+              disabled={!canSend}
+              className="w-11 h-11 rounded-full items-center justify-center"
+              style={{
+                backgroundColor: canSend ? Colors.primary : Colors.surfaceMuted,
+              }}
+            >
+              <Send
+                size={20}
+                color={canSend ? '#FFFFFF' : Colors.textMuted}
+                strokeWidth={2}
+              />
+            </Pressable>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }

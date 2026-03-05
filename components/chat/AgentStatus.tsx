@@ -79,7 +79,7 @@ function ThinkingDots() {
 
 function ToolHintBadge({ tool }: { tool: string }) {
   return (
-    <View className="flex-row items-center bg-surface rounded-full px-3 py-1.5">
+    <View className="flex-row items-center bg-surface-nested rounded-full px-3 py-1.5">
       <Wrench size={14} color={Colors.textMuted} strokeWidth={1.5} />
       <Text className="text-text-muted text-xs italic ml-1.5">
         Verwende {tool}...

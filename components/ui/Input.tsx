@@ -23,29 +23,28 @@ export function Input({
   const [focused, setFocused] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const borderClass = error
-    ? 'border-error'
+  const borderColor = error
+    ? '#EF4444'
     : focused
-      ? 'border-primary'
-      : 'border-border';
+      ? '#2563EB'
+      : '#E2E8F0';
 
   return (
     <View className="w-full">
       {label && (
-        <Text className="text-text-secondary text-sm mb-1.5 ml-1">{label}</Text>
+        <Text className="text-sm mb-1.5 ml-1" style={{ color: '#475569' }}>{label}</Text>
       )}
       <View
-        className={`
-          flex-row items-center bg-surface border ${borderClass}
-          rounded-xl h-12 px-4
-        `}
+        className="flex-row items-center bg-white rounded-[14px] h-12 px-4"
+        style={{ borderWidth: 1, borderColor }}
       >
         {LeftIcon && (
-          <LeftIcon size={20} color="#71717A" strokeWidth={2} className="mr-2" />
+          <LeftIcon size={20} color="#94A3B8" strokeWidth={2} className="mr-2" />
         )}
         <TextInput
-          className="flex-1 text-text-primary text-base"
-          placeholderTextColor="#71717A"
+          className="flex-1 text-base"
+          style={{ color: '#0F172A' }}
+          placeholderTextColor="#94A3B8"
           secureTextEntry={isPassword && !showPassword}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
@@ -54,12 +53,12 @@ export function Input({
         {isPassword && (
           <Pressable onPress={() => setShowPassword((prev) => !prev)} className="ml-2">
             {showPassword
-              ? <EyeOff size={20} color="#71717A" strokeWidth={2} />
-              : <Eye size={20} color="#71717A" strokeWidth={2} />}
+              ? <EyeOff size={20} color="#94A3B8" strokeWidth={2} />
+              : <Eye size={20} color="#94A3B8" strokeWidth={2} />}
           </Pressable>
         )}
         {RightIcon && !isPassword && (
-          <RightIcon size={20} color="#71717A" strokeWidth={2} className="ml-2" />
+          <RightIcon size={20} color="#94A3B8" strokeWidth={2} className="ml-2" />
         )}
       </View>
       {error && (

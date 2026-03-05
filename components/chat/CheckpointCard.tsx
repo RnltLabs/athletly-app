@@ -2,7 +2,7 @@
  * CheckpointCard — Athletly V2
  *
  * Inline card in chat for checkpoint confirmation.
- * - Glass variant card with preview content
+ * - Nested variant card with preview content
  * - Type indicator: "Bestaetigung erforderlich" (HARD) or "Vorschlag" (SOFT)
  * - Accept/Reject buttons
  */
@@ -55,7 +55,7 @@ export function CheckpointCard({
 
   return (
     <View className="self-start max-w-[90%] mb-3">
-      <Card variant="glass" className="gap-3">
+      <Card variant="nested" className="gap-3">
         {/* Header */}
         <View className="flex-row items-center gap-2">
           <Sparkles size={16} color={Colors.primary} strokeWidth={2} />

@@ -88,7 +88,7 @@ export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
 
       {/* Coach note */}
       {session.coachNote ? (
-        <View className="flex-row items-start gap-2 bg-surface-elevated/50 rounded-lg p-3 mb-3">
+        <View className="flex-row items-start gap-2 rounded-lg p-3 mb-3" style={{ backgroundColor: '#F5F6F8' }}>
           <MessageCircle size={14} color={Colors.textMuted} strokeWidth={2} />
           <Text className="text-text-secondary text-sm italic flex-1 leading-5">
             {session.coachNote}
