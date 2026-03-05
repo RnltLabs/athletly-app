@@ -49,6 +49,7 @@ export default function CoachScreen() {
     addMessage,
     setSessionId,
     setTyping,
+    setPendingCheckpoint,
     confirmCheckpoint,
     loadMessages,
   } = useChatStore();
@@ -111,6 +112,10 @@ export default function CoachScreen() {
             setAgentTool(prog.tool);
           },
           'coach',
+          undefined,
+          (cp) => {
+            setPendingCheckpoint(cp);
+          },
         );
       } catch (err) {
         console.error('[CoachScreen] Send error:', err);
@@ -128,7 +133,7 @@ export default function CoachScreen() {
         setAgentTool(undefined);
       }
     },
-    [sessionId, sendMessage, addMessage, setSessionId, setTyping, toolsUsed],
+    [sessionId, sendMessage, addMessage, setSessionId, setTyping, setPendingCheckpoint, toolsUsed],
   );
 
   const handleQuickReply = useCallback(

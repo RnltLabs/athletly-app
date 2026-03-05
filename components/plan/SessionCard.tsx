@@ -1,13 +1,13 @@
 /**
  * SessionCard — Workout session details card
  *
- * Shows sport badge, intensity, title, description,
- * metrics (duration/distance), coach note, and action buttons.
+ * Shows sport badge, intensity, session type, description,
+ * duration metric, and optional details expansion.
  */
 
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Clock, MapPin, MessageCircle } from 'lucide-react-native';
+import { Clock } from 'lucide-react-native';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -22,11 +22,28 @@ interface SessionCardProps {
 }
 
 const INTENSITY_LABELS: Record<string, string> = {
-  easy: 'Leicht',
+  low: 'Leicht',
   moderate: 'Moderat',
-  hard: 'Intensiv',
-  recovery: 'Erholung',
+  high: 'Intensiv',
 };
+
+const DEFAULT_INTENSITY_LABEL = 'Unbekannt';
+
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  intervals: 'Intervalle',
+  tempo: 'Tempo',
+  long_run: 'Langer Lauf',
+  easy_run: 'Lockerer Lauf',
+  recovery: 'Erholung',
+  strength: 'Kraft',
+  flexibility: 'Beweglichkeit',
+  endurance: 'Ausdauer',
+  race: 'Wettkampf',
+};
+
+function getSessionTypeLabel(sessionType: string): string {
+  return SESSION_TYPE_LABELS[sessionType] ?? sessionType;
+}
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} Min`;
@@ -35,13 +52,10 @@ function formatDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
-function formatDistance(km: number): string {
-  return km % 1 === 0 ? `${km} km` : `${km.toFixed(1)} km`;
-}
-
 export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
   const sportColor = getSportColor(session.sport);
-  const intensityLabel = INTENSITY_LABELS[session.intensity] ?? session.intensity;
+  const intensityLabel = INTENSITY_LABELS[session.intensity] ?? DEFAULT_INTENSITY_LABEL;
+  const typeLabel = getSessionTypeLabel(session.session_type);
 
   return (
     <Card variant="standard" className="mb-3">
@@ -50,14 +64,16 @@ export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
 
       {/* Badges row */}
       <View className="flex-row items-center justify-between mt-1 mb-2">
-        <Badge type="sport" sport={session.sport} label={session.sport} />
+        <View className="flex-row items-center gap-2">
+          <Badge type="sport" sport={session.sport} label={session.sport} />
+          {session.session_type ? (
+            <Text className="text-text-muted text-xs font-medium">
+              {typeLabel}
+            </Text>
+          ) : null}
+        </View>
         <Badge type="intensity" intensity={session.intensity} label={intensityLabel} />
       </View>
-
-      {/* Title */}
-      <Text className="text-text-primary text-lg font-semibold mb-1">
-        {session.title}
-      </Text>
 
       {/* Description */}
       {session.description ? (
@@ -68,33 +84,15 @@ export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
 
       {/* Metrics row */}
       <View className="flex-row items-center gap-4 mb-3">
-        {session.duration != null && (
+        {session.duration_minutes > 0 && (
           <View className="flex-row items-center gap-1.5">
             <Clock size={14} color={Colors.textSecondary} strokeWidth={2} />
             <Text className="text-text-secondary text-sm">
-              {formatDuration(session.duration)}
-            </Text>
-          </View>
-        )}
-        {session.distance != null && (
-          <View className="flex-row items-center gap-1.5">
-            <MapPin size={14} color={Colors.textSecondary} strokeWidth={2} />
-            <Text className="text-text-secondary text-sm">
-              {formatDistance(session.distance)}
+              {formatDuration(session.duration_minutes)}
             </Text>
           </View>
         )}
       </View>
-
-      {/* Coach note */}
-      {session.coachNote ? (
-        <View className="flex-row items-start gap-2 rounded-lg p-3 mb-3" style={{ backgroundColor: '#F5F6F8' }}>
-          <MessageCircle size={14} color={Colors.textMuted} strokeWidth={2} />
-          <Text className="text-text-secondary text-sm italic flex-1 leading-5">
-            {session.coachNote}
-          </Text>
-        </View>
-      ) : null}
 
       {/* Action buttons */}
       <View className="flex-row items-center justify-end gap-2">

@@ -11,7 +11,9 @@ export type {
 export type {
   WeeklyPlan,
   PlannedSession,
-  PlanSummary,
+  DayPlan,
+  Intensity,
+  SessionDetails,
 } from './plan';
 
 export type {

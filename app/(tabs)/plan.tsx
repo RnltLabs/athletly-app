@@ -21,7 +21,7 @@ import { WeekStrip } from '@/components/plan/WeekStrip';
 import { SessionCard } from '@/components/plan/SessionCard';
 import { RestDayCard } from '@/components/plan/RestDayCard';
 import { WeeklySummary } from '@/components/plan/WeeklySummary';
-import type { PlannedSession } from '@/types/plan';
+import type { DayPlan, PlannedSession } from '@/types/plan';
 
 // --- Date Utilities ---
 
@@ -118,15 +118,17 @@ export default function PlanScreen() {
   // Check if plan matches the displayed week
   const planMatchesWeek = currentPlan?.weekStart === weekStart;
 
-  const sessionsForWeek: readonly PlannedSession[] = useMemo(() => {
+  const daysForWeek: readonly DayPlan[] = useMemo(() => {
     if (!planMatchesWeek || !currentPlan) return [];
-    return currentPlan.sessions;
+    return currentPlan.days;
   }, [planMatchesWeek, currentPlan]);
 
-  const sessionsForDay: readonly PlannedSession[] = useMemo(
-    () => sessionsForWeek.filter((s) => s.date === selectedDate),
-    [sessionsForWeek, selectedDate],
+  const selectedDay: DayPlan | undefined = useMemo(
+    () => daysForWeek.find((d) => d.date === selectedDate),
+    [daysForWeek, selectedDate],
   );
+
+  const sessionsForDay: readonly PlannedSession[] = selectedDay?.sessions ?? [];
 
   const handlePreviousWeek = useCallback(() => {
     setWeekOffset((prev) => prev - 1);
@@ -207,7 +209,7 @@ export default function PlanScreen() {
             {/* Week Strip */}
             <WeekStrip
               weekStart={weekStart}
-              sessions={sessionsForWeek as PlannedSession[]}
+              days={daysForWeek as DayPlan[]}
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
             />
@@ -225,10 +227,10 @@ export default function PlanScreen() {
                 </Text>
               </View>
             ) : sessionsForDay.length === 0 ? (
-              <RestDayCard />
+              <RestDayCard message={selectedDay?.rest_reason} />
             ) : (
-              sessionsForDay.map((session) => (
-                <SessionCard key={session.id} session={session} />
+              sessionsForDay.map((session, index) => (
+                <SessionCard key={`${selectedDate}-${session.sport}-${index}`} session={session} />
               ))
             )}
 

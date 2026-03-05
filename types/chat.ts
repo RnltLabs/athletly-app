@@ -23,9 +23,12 @@ export interface StreamProgress {
 }
 
 export interface UsageStats {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
+  readonly model: string;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+  readonly provider?: string;
+  readonly costUsd?: number;
+  readonly latencyMs?: number;
 }
 
 export type ChatContext = 'coach' | 'onboarding';

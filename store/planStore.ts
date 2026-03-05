@@ -3,17 +3,22 @@
  *
  * Zustand store for weekly training plan state.
  * Fetches from Supabase weekly_plans table.
+ *
+ * Backend schema:
+ *   - days: JSONB array of DayPlan objects
+ *   - coach_message: text
+ *   - reasoning: text
  */
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
-import type { WeeklyPlan } from '@/types/plan';
+import type { WeeklyPlan, DayPlan } from '@/types/plan';
 
 interface PlanState {
-  currentPlan: WeeklyPlan | null;
-  selectedDate: string;        // ISO date string
-  isLoading: boolean;
-  error: string | null;
+  readonly currentPlan: WeeklyPlan | null;
+  readonly selectedDate: string;        // ISO date string
+  readonly isLoading: boolean;
+  readonly error: string | null;
 
   fetchPlan: (userId: string) => Promise<void>;
   setSelectedDate: (date: string) => void;
@@ -30,6 +35,30 @@ function getCurrentMonday(): string {
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d.getFullYear(), d.getMonth(), diff);
   return monday.toISOString().split('T')[0];
+}
+
+/**
+ * Parse the `days` JSONB column from the backend into typed DayPlan[].
+ * Defensive: returns empty array if data is missing or malformed.
+ */
+function parseDays(raw: unknown): readonly DayPlan[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.map((day) => ({
+    date: typeof day.date === 'string' ? day.date : '',
+    day_name: typeof day.day_name === 'string' ? day.day_name : '',
+    sessions: Array.isArray(day.sessions)
+      ? day.sessions.map((s: Record<string, unknown>) => ({
+          sport: typeof s.sport === 'string' ? s.sport : 'unknown',
+          duration_minutes: typeof s.duration_minutes === 'number' ? s.duration_minutes : 0,
+          intensity: typeof s.intensity === 'string' ? s.intensity : 'moderate',
+          session_type: typeof s.session_type === 'string' ? s.session_type : '',
+          description: typeof s.description === 'string' ? s.description : '',
+          details: typeof s.details === 'object' && s.details !== null ? s.details : undefined,
+        }))
+      : [],
+    rest_reason: typeof day.rest_reason === 'string' ? day.rest_reason : undefined,
+  }));
 }
 
 export const usePlanStore = create<PlanState>((set, get) => ({
@@ -62,10 +91,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
           id: data.id,
           userId: data.user_id,
           weekStart: data.week_start,
-          weekEnd: data.week_end,
-          sessions: data.sessions || [],
-          summary: data.summary || undefined,
-          coachNote: data.coach_note || undefined,
+          days: parseDays(data.days),
+          coachMessage: data.coach_message ?? '',
+          reasoning: data.reasoning ?? '',
           createdAt: data.created_at,
           updatedAt: data.updated_at,
         };

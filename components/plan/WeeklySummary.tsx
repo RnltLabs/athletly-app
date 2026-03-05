@@ -2,15 +2,16 @@
  * WeeklySummary — Summary card at bottom of plan view
  *
  * Shows sport distribution, total stats, and coach message.
+ * Reads from the new days-based WeeklyPlan structure.
  */
 
-import React from 'react';
-import { View, Text } from 'react-native';
-import { MessageCircle } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, Pressable } from 'react-native';
+import { MessageCircle, ChevronDown, ChevronUp } from 'lucide-react-native';
 import { Card } from '@/components/ui/Card';
 import { Colors } from '@/lib/colors';
 import { getSportColor } from '@/lib/sport-colors';
-import type { WeeklyPlan } from '@/types/plan';
+import type { WeeklyPlan, PlannedSession } from '@/types/plan';
 
 interface WeeklySummaryProps {
   plan: WeeklyPlan;
@@ -37,9 +38,16 @@ function formatTotalDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
+/**
+ * Flatten all sessions from the days array.
+ */
+function getAllSessions(plan: WeeklyPlan): readonly PlannedSession[] {
+  return plan.days.flatMap((day) => day.sessions);
+}
+
 function buildSportDistribution(plan: WeeklyPlan): Array<{ sport: string; count: number }> {
   const counts: Record<string, number> = {};
-  for (const session of plan.sessions) {
+  for (const session of getAllSessions(plan)) {
     const key = session.sport.toLowerCase();
     counts[key] = (counts[key] ?? 0) + 1;
   }
@@ -49,15 +57,15 @@ function buildSportDistribution(plan: WeeklyPlan): Array<{ sport: string; count:
 }
 
 export function WeeklySummary({ plan }: WeeklySummaryProps) {
-  const distribution = buildSportDistribution(plan);
-  const totalSessions = plan.summary?.totalSessions ?? plan.sessions.length;
-  const totalDuration = plan.summary?.totalDuration
-    ?? plan.sessions.reduce((sum, s) => sum + (s.duration ?? 0), 0);
+  const allSessions = useMemo(() => getAllSessions(plan), [plan]);
+  const distribution = useMemo(() => buildSportDistribution(plan), [plan]);
+  const totalSessions = allSessions.length;
+  const totalDuration = allSessions.reduce((sum, s) => sum + (s.duration_minutes ?? 0), 0);
 
   return (
     <Card variant="standard" className="mb-4">
       <Text className="text-text-primary text-lg font-semibold mb-3">
-        Wochenübersicht
+        Wochenuebersicht
       </Text>
 
       {/* Sport distribution */}
@@ -85,16 +93,50 @@ export function WeeklySummary({ plan }: WeeklySummaryProps) {
         </Text>
       </View>
 
-      {/* Coach note */}
-      {plan.coachNote ? (
-        <View className="flex-row items-start gap-2 rounded-lg p-3" style={{ backgroundColor: '#F5F6F8' }}>
-          <MessageCircle size={14} color={Colors.textMuted} strokeWidth={2} />
-          <Text className="text-text-secondary text-sm italic flex-1 leading-5">
-            {plan.coachNote}
-          </Text>
+      {/* Coach message */}
+      {plan.coachMessage ? (
+        <View className="rounded-lg p-3" style={{ backgroundColor: '#F5F6F8' }}>
+          <View className="flex-row items-start gap-2">
+            <MessageCircle size={14} color={Colors.textMuted} strokeWidth={2} />
+            <Text className="text-text-secondary text-sm italic flex-1 leading-5">
+              {plan.coachMessage}
+            </Text>
+          </View>
+
+          {/* Expandable reasoning */}
+          {plan.reasoning ? (
+            <ReasoningSection reasoning={plan.reasoning} />
+          ) : null}
         </View>
       ) : null}
     </Card>
+  );
+}
+
+function ReasoningSection({ reasoning }: { reasoning: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const ChevronIcon = expanded ? ChevronUp : ChevronDown;
+
+  return (
+    <View className="mt-2 border-t border-divider pt-2">
+      <Pressable
+        onPress={() => setExpanded((prev) => !prev)}
+        className="flex-row items-center gap-1"
+        accessibilityRole="button"
+        accessibilityLabel={expanded ? 'Begründung einklappen' : 'Begründung ausklappen'}
+      >
+        <Text className="text-text-muted text-xs font-medium">
+          Begründung
+        </Text>
+        <ChevronIcon size={12} color={Colors.textMuted} strokeWidth={2} />
+      </Pressable>
+
+      {expanded ? (
+        <Text className="text-text-muted text-xs mt-1.5 leading-4">
+          {reasoning}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 

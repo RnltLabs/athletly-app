@@ -1,38 +1,40 @@
 /**
  * Plan Types — Athletly V2
  *
- * Types for weekly training plans and planned sessions.
+ * Types for weekly training plans aligned with the Visionplan backend schema.
+ * The `weekly_plans` table stores `days` as JSONB array, plus
+ * `coach_message` and `reasoning` as top-level columns.
  */
 
-export interface WeeklyPlan {
-  id: string;
-  userId: string;
-  weekStart: string;          // ISO date string (Monday)
-  weekEnd: string;            // ISO date string (Sunday)
-  sessions: PlannedSession[];
-  summary?: PlanSummary;
-  coachNote?: string;
-  createdAt: string;
-  updatedAt: string;
+export type Intensity = 'low' | 'moderate' | 'high';
+
+export interface SessionDetails {
+  readonly [key: string]: unknown;
 }
 
 export interface PlannedSession {
-  id: string;
-  dayOfWeek: number;          // 0=Monday, 6=Sunday
-  date: string;               // ISO date string
-  sport: string;              // e.g. 'running', 'cycling', 'gym'
-  title: string;
-  description?: string;
-  duration?: number;           // minutes
-  distance?: number;           // km
-  intensity: 'easy' | 'moderate' | 'hard' | 'recovery';
-  coachNote?: string;
-  completed?: boolean;
+  readonly sport: string;
+  readonly duration_minutes: number;
+  readonly intensity: Intensity;
+  readonly session_type: string;
+  readonly description: string;
+  readonly details?: SessionDetails;
 }
 
-export interface PlanSummary {
-  totalSessions: number;
-  totalDuration: number;       // minutes
-  sportDistribution: Record<string, number>; // sport -> count
-  weekGoal?: string;
+export interface DayPlan {
+  readonly date: string;           // ISO date string (YYYY-MM-DD)
+  readonly day_name: string;       // e.g. "Montag"
+  readonly sessions: readonly PlannedSession[];
+  readonly rest_reason?: string;   // optional reason when sessions is empty
+}
+
+export interface WeeklyPlan {
+  readonly id: string;
+  readonly userId: string;
+  readonly weekStart: string;      // ISO date string (Monday)
+  readonly days: readonly DayPlan[];
+  readonly coachMessage: string;
+  readonly reasoning: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }

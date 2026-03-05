@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/authStore';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Colors } from '@/lib/colors';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 /**
  * Auth guard — redirects to the correct route group based on auth state.
@@ -72,6 +73,7 @@ export default function RootLayout() {
   }, [initialize]);
 
   useAuthGuard();
+  usePushNotifications();
 
   if (!isInitialized) {
     return (

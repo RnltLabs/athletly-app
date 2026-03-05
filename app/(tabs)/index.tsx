@@ -91,14 +91,15 @@ export default function TodayScreen() {
     await Promise.all([fetchPlan(user.id), fetchMetrics(user.id)]);
   }, [user?.id, fetchPlan, fetchMetrics]);
 
-  // Find today's session
+  // Find today's session from the days array
   const todayISO = getTodayISO();
-  const todaySession = useMemo(
-    () => currentPlan?.sessions.find((s) => s.date === todayISO) ?? null,
-    [currentPlan?.sessions, todayISO],
+  const todayDay = useMemo(
+    () => currentPlan?.days.find((d) => d.date === todayISO) ?? null,
+    [currentPlan?.days, todayISO],
   );
+  const todaySession = todayDay?.sessions[0] ?? null;
 
-  const isRestDay = currentPlan !== null && todaySession === null;
+  const isRestDay = currentPlan !== null && (todayDay === null || todayDay.sessions.length === 0);
   const hasNoplan = !planLoading && currentPlan === null;
 
   // Navigate to coach tab
@@ -189,8 +190,7 @@ export default function TodayScreen() {
             {currentPlan && (
               <View className="mt-6">
                 <WeekProgress
-                  sessions={currentPlan.sessions}
-                  totalPlanned={currentPlan.summary?.totalSessions ?? currentPlan.sessions.length}
+                  days={currentPlan.days}
                 />
               </View>
             )}

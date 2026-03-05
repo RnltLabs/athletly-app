@@ -3,6 +3,7 @@
  *
  * Hero-sized card showing today's planned workout session.
  * Variants: workout (with sport badge, intensity, CTA) and rest day (moon icon, relaxation).
+ * Uses the Visionplan PlannedSession schema (duration_minutes, session_type, etc.).
  */
 
 import React from 'react';
@@ -30,16 +31,29 @@ function formatDuration(minutes: number): string {
   return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
-function formatDistance(km: number): string {
-  return `${km.toFixed(1)} km`;
-}
-
 const INTENSITY_LABELS: Record<string, string> = {
-  easy: 'Leicht',
+  low: 'Leicht',
   moderate: 'Moderat',
-  hard: 'Intensiv',
-  recovery: 'Regeneration',
+  high: 'Intensiv',
 };
+
+const DEFAULT_INTENSITY_LABEL = 'Unbekannt';
+
+const SESSION_TYPE_LABELS: Record<string, string> = {
+  intervals: 'Intervalle',
+  tempo: 'Tempo',
+  long_run: 'Langer Lauf',
+  easy_run: 'Lockerer Lauf',
+  recovery: 'Erholung',
+  strength: 'Kraft',
+  flexibility: 'Beweglichkeit',
+  endurance: 'Ausdauer',
+  race: 'Wettkampf',
+};
+
+function getSessionTypeLabel(sessionType: string): string {
+  return SESSION_TYPE_LABELS[sessionType] ?? sessionType;
+}
 
 function RestDayCard({ onAskCoach }: { onAskCoach?: () => void }) {
   return (
@@ -87,7 +101,8 @@ function WorkoutCard({
   onAskCoach?: () => void;
 }) {
   const sportColor = getSportColor(session.sport);
-  const intensityLabel = INTENSITY_LABELS[session.intensity] ?? session.intensity;
+  const intensityLabel = INTENSITY_LABELS[session.intensity] ?? DEFAULT_INTENSITY_LABEL;
+  const typeLabel = session.session_type ? getSessionTypeLabel(session.session_type) : null;
 
   return (
     <Card variant="hero" className="mx-4">
@@ -103,33 +118,26 @@ function WorkoutCard({
         <Badge type="intensity" intensity={session.intensity} label={intensityLabel} />
       </View>
 
-      {/* Title */}
-      <Text className="text-text-primary text-xl font-semibold mb-2">
-        {session.title}
-      </Text>
-
-      {/* Metrics row */}
-      <View className="flex-row gap-4 mb-3">
-        {session.duration != null && (
-          <Text className="text-text-secondary text-sm">
-            {formatDuration(session.duration)}
+      {/* Session type + duration */}
+      <View className="flex-row items-center gap-3 mb-2">
+        {typeLabel && (
+          <Text className="text-text-primary text-xl font-semibold">
+            {typeLabel}
           </Text>
         )}
-        {session.distance != null && (
+        {session.duration_minutes > 0 && (
           <Text className="text-text-secondary text-sm">
-            {formatDistance(session.distance)}
+            {formatDuration(session.duration_minutes)}
           </Text>
         )}
       </View>
 
-      {/* Coach note */}
-      {session.coachNote && (
-        <View className="bg-surface-nested rounded-xl p-3 mb-4">
-          <Text className="text-text-secondary text-sm italic leading-5">
-            {session.coachNote}
-          </Text>
-        </View>
-      )}
+      {/* Description */}
+      {session.description ? (
+        <Text className="text-text-secondary text-sm leading-5 mb-3">
+          {session.description}
+        </Text>
+      ) : null}
 
       {/* Actions */}
       <View className="gap-2">

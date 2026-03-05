@@ -3,6 +3,8 @@
  *
  * Shows day abbreviation, date number, sport indicator dots,
  * today highlight, and selected state.
+ *
+ * Accepts the days-based DayPlan array from the backend.
  */
 
 import React from 'react';
@@ -10,13 +12,13 @@ import { View, Text, Pressable } from 'react-native';
 import { Moon } from 'lucide-react-native';
 import { getSportColor } from '@/lib/sport-colors';
 import { Colors } from '@/lib/colors';
-import type { PlannedSession } from '@/types/plan';
+import type { DayPlan } from '@/types/plan';
 
 const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as const;
 
 interface WeekStripProps {
   weekStart: string;
-  sessions: PlannedSession[];
+  days: readonly DayPlan[];
   selectedDate: string;
   onSelectDate: (date: string) => void;
 }
@@ -31,11 +33,11 @@ function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function getSessionsForDate(sessions: PlannedSession[], date: string): PlannedSession[] {
-  return sessions.filter((s) => s.date === date);
+function getDayPlanForDate(days: readonly DayPlan[], date: string): DayPlan | undefined {
+  return days.find((d) => d.date === date);
 }
 
-export function WeekStrip({ weekStart, sessions, selectedDate, onSelectDate }: WeekStripProps) {
+export function WeekStrip({ weekStart, days, selectedDate, onSelectDate }: WeekStripProps) {
   const today = getTodayISO();
 
   return (
@@ -45,7 +47,8 @@ export function WeekStrip({ weekStart, sessions, selectedDate, onSelectDate }: W
         const dayNumber = new Date(date).getDate();
         const isToday = date === today;
         const isSelected = date === selectedDate;
-        const daySessions = getSessionsForDate(sessions, date);
+        const dayPlan = getDayPlanForDate(days, date);
+        const daySessions = dayPlan?.sessions ?? [];
         const isRest = daySessions.length === 0;
 
         return (
@@ -80,9 +83,9 @@ export function WeekStrip({ weekStart, sessions, selectedDate, onSelectDate }: W
               {isRest ? (
                 <Moon size={10} color={Colors.textMuted} strokeWidth={2} />
               ) : (
-                daySessions.map((session) => (
+                daySessions.map((session, sIdx) => (
                   <View
-                    key={session.id}
+                    key={`${date}-${sIdx}`}
                     className="w-1.5 h-1.5 rounded-full"
                     style={{ backgroundColor: getSportColor(session.sport) }}
                   />

@@ -4,7 +4,6 @@ import { getSportColor } from '../../lib/sport-colors';
 
 type BadgeType = 'sport' | 'status' | 'intensity';
 type StatusLevel = 'success' | 'warning' | 'error';
-type IntensityLevel = 'easy' | 'moderate' | 'hard' | 'max' | 'recovery';
 
 interface BadgeBaseProps {
   label: string;
@@ -22,7 +21,7 @@ interface StatusBadgeProps extends BadgeBaseProps {
 
 interface IntensityBadgeProps extends BadgeBaseProps {
   type: 'intensity';
-  intensity: IntensityLevel;
+  intensity: string;
 }
 
 type BadgeProps = SportBadgeProps | StatusBadgeProps | IntensityBadgeProps;
@@ -33,19 +32,19 @@ const STATUS_COLORS: Record<StatusLevel, string> = {
   error: '#EF4444',
 };
 
-const INTENSITY_COLORS: Record<IntensityLevel, string> = {
-  easy: '#22C55E',
+const INTENSITY_COLORS: Record<string, string> = {
+  low: '#22C55E',
   moderate: '#2563EB',
-  hard: '#F59E0B',
-  max: '#EF4444',
-  recovery: '#94A3B8',
+  high: '#F59E0B',
 };
+
+const DEFAULT_INTENSITY_COLOR = '#94A3B8';
 
 function getColorForBadge(props: BadgeProps): string {
   switch (props.type) {
     case 'sport': return getSportColor(props.sport);
     case 'status': return STATUS_COLORS[props.status];
-    case 'intensity': return INTENSITY_COLORS[props.intensity];
+    case 'intensity': return INTENSITY_COLORS[props.intensity] ?? DEFAULT_INTENSITY_COLOR;
   }
 }
 

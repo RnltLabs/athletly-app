@@ -3,47 +3,53 @@
  *
  * Shows weekly training progress:
  * "X von Y Einheiten" text + progress bar + day status dots.
+ * Uses the days-based DayPlan array from the backend.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { ProgressBar } from '@/components/ui/ProgressBar';
 import { getSportColor } from '@/lib/sport-colors';
 import { Colors } from '@/lib/colors';
-import type { PlannedSession } from '@/types/plan';
+import type { DayPlan } from '@/types/plan';
 
 interface DayStatus {
   sport: string;
-  completed: boolean;
+  hasSessions: boolean;
   isRestDay: boolean;
 }
 
 interface WeekProgressProps {
-  sessions: PlannedSession[];
-  totalPlanned: number;
+  days: readonly DayPlan[];
 }
 
 const DAY_LABELS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'] as const;
 const DOT_SIZE = 8;
 
-function buildDayStatuses(sessions: PlannedSession[]): DayStatus[] {
+function buildDayStatuses(days: readonly DayPlan[]): DayStatus[] {
   return DAY_LABELS.map((_, index) => {
-    const session = sessions.find((s) => s.dayOfWeek === index);
-    if (!session) {
-      return { sport: 'rest', completed: false, isRestDay: true };
+    const dayPlan = days[index];
+    if (!dayPlan || dayPlan.sessions.length === 0) {
+      return { sport: 'rest', hasSessions: false, isRestDay: true };
     }
     return {
-      sport: session.sport,
-      completed: session.completed === true,
+      sport: dayPlan.sessions[0].sport,
+      hasSessions: true,
       isRestDay: false,
     };
   });
 }
 
-export function WeekProgress({ sessions, totalPlanned }: WeekProgressProps) {
-  const completedCount = sessions.filter((s) => s.completed).length;
+export function WeekProgress({ days }: WeekProgressProps) {
+  const dayStatuses = useMemo(() => buildDayStatuses(days), [days]);
+  const totalPlanned = useMemo(
+    () => days.reduce((sum, d) => sum + d.sessions.length, 0),
+    [days],
+  );
+
+  // TODO: track completed sessions once backend supports it
+  const completedCount = 0;
   const progress = totalPlanned > 0 ? completedCount / totalPlanned : 0;
-  const dayStatuses = buildDayStatuses(sessions);
 
   return (
     <View className="mx-4">
@@ -66,9 +72,7 @@ export function WeekProgress({ sessions, totalPlanned }: WeekProgressProps) {
           const status = dayStatuses[index];
           const dotColor = status.isRestDay
             ? Colors.surfaceMuted
-            : status.completed
-              ? getSportColor(status.sport)
-              : `${getSportColor(status.sport)}40`;
+            : getSportColor(status.sport);
 
           return (
             <View key={label} className="items-center gap-1">

@@ -9,7 +9,7 @@
  *   tool_hint      -> {name, args}
  *   tool_result    -> {name, preview}
  *   tool_error     -> {detail}
- *   message        -> {text}
+ *   message        -> {text, checkpoint?: {id, type, preview}}
  *   usage          -> {input_tokens, output_tokens, model}
  *   onboarding_complete -> {}
  *   error          -> {message, code}
@@ -23,6 +23,7 @@ import type {
   StreamMessage,
   UsageStats,
   ChatContext,
+  Checkpoint,
 } from '@/types/chat';
 
 import EventSource from 'react-native-sse';
@@ -50,6 +51,7 @@ interface UseChatStreamResult {
     onProgress?: (progress: StreamProgress) => void,
     context?: ChatContext,
     onOnboardingComplete?: () => void,
+    onCheckpoint?: (checkpoint: Checkpoint) => void,
   ) => Promise<void>;
   isStreaming: boolean;
   progress: StreamProgress | null;
@@ -94,6 +96,7 @@ export function useChatStream(): UseChatStreamResult {
       onProgress?: (progress: StreamProgress) => void,
       context?: ChatContext,
       onOnboardingComplete?: () => void,
+      onCheckpoint?: (checkpoint: Checkpoint) => void,
     ) => {
       if (!session?.access_token) {
         setError('Nicht authentifiziert');
@@ -205,6 +208,17 @@ export function useChatStream(): UseChatStreamResult {
                 content: data.text,
                 sessionId: capturedSessionId,
               });
+
+              // Extract checkpoint if present in the message event
+              if (data.checkpoint && typeof data.checkpoint === 'object') {
+                const cp: Checkpoint = {
+                  id: data.checkpoint.id,
+                  type: data.checkpoint.type === 'SOFT' ? 'SOFT' : 'HARD',
+                  preview: data.checkpoint.preview ?? {},
+                };
+                console.log('[useChatStream] Checkpoint received:', cp.id, cp.type);
+                onCheckpoint?.(cp);
+              }
             } catch (e) {
               console.warn('[useChatStream] Failed to parse message:', e);
             }
@@ -217,6 +231,9 @@ export function useChatStream(): UseChatStreamResult {
                 model: data.model,
                 inputTokens: data.input_tokens,
                 outputTokens: data.output_tokens,
+                provider: typeof data.provider === 'string' ? data.provider : undefined,
+                costUsd: typeof data.cost_usd === 'number' ? data.cost_usd : undefined,
+                latencyMs: typeof data.latency_ms === 'number' ? data.latency_ms : undefined,
               });
             } catch (e) {
               console.warn('[useChatStream] Failed to parse usage:', e);
