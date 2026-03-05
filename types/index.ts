@@ -29,3 +29,7 @@ export type {
   QuickLogEntry,
   TrackedActivity,
 } from './tracking';
+
+export type {
+  ProductRecommendation,
+} from './product';

@@ -19,6 +19,7 @@ import { RecoveryGauge } from '@/components/home/RecoveryGauge';
 import { HeroWorkoutCard } from '@/components/home/HeroWorkoutCard';
 import { MetricMiniCard } from '@/components/home/MetricMiniCard';
 import { WeekProgress } from '@/components/home/WeekProgress';
+import { ProductBar } from '@/components/plan/ProductBar';
 import { Colors } from '@/lib/colors';
 
 /**
@@ -185,6 +186,13 @@ export default function TodayScreen() {
               isRestDay={isRestDay}
               onAskCoach={navigateToCoach}
             />
+
+            {/* 4b. Product Recommendations */}
+            {currentPlan && (
+              <View className="px-4 mt-4">
+                <ProductBar planId={currentPlan.id} />
+              </View>
+            )}
 
             {/* 5. Week Progress */}
             {currentPlan && (

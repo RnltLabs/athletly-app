@@ -21,6 +21,7 @@ import { WeekStrip } from '@/components/plan/WeekStrip';
 import { SessionCard } from '@/components/plan/SessionCard';
 import { RestDayCard } from '@/components/plan/RestDayCard';
 import { WeeklySummary } from '@/components/plan/WeeklySummary';
+import { ProductBar } from '@/components/plan/ProductBar';
 import type { DayPlan, PlannedSession } from '@/types/plan';
 
 // --- Date Utilities ---
@@ -232,6 +233,11 @@ export default function PlanScreen() {
               sessionsForDay.map((session, index) => (
                 <SessionCard key={`${selectedDate}-${session.sport}-${index}`} session={session} />
               ))
+            )}
+
+            {/* Product Recommendations */}
+            {planMatchesWeek && currentPlan && (
+              <ProductBar planId={currentPlan.id} />
             )}
 
             {/* Weekly Summary */}
