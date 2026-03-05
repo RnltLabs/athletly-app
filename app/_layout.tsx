@@ -16,6 +16,7 @@ import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { ToastProvider } from '@/components/ui/Toast';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Colors } from '@/lib/colors';
 
 /**
@@ -84,7 +85,9 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ToastProvider>
-        <Stack screenOptions={{ headerShown: false }} />
+        <ErrorBoundary>
+          <Stack screenOptions={{ headerShown: false }} />
+        </ErrorBoundary>
         <StatusBar style="light" />
       </ToastProvider>
     </SafeAreaProvider>
