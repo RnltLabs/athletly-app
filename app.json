@@ -16,7 +16,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.athletly.app",
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.background-delivery": true,
+        "com.apple.developer.healthkit.access": []
+      },
       "infoPlist": {
+        "NSHealthShareUsageDescription": "Athletly liest deine Gesundheitsdaten aus Apple Health, um deinem KI-Coach personalisierte Trainingsempfehlungen zu ermoeglichen.",
+        "NSHealthUpdateUsageDescription": "Athletly kann Trainingsdaten in Apple Health schreiben.",
         "NSSpeechRecognitionUsageDescription": "This app uses speech recognition for voice input to chat with your AI coach.",
         "NSMicrophoneUsageDescription": "This app uses the microphone for voice input to chat with your AI coach."
       }
@@ -51,6 +58,13 @@
         {
           "microphonePermission": "This app uses the microphone for voice input to chat with your AI coach.",
           "speechRecognitionPermission": "This app uses speech recognition for voice input to chat with your AI coach."
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Athletly liest deine Gesundheitsdaten aus Apple Health, um deinem KI-Coach personalisierte Trainingsempfehlungen zu ermoeglichen.",
+          "NSHealthUpdateUsageDescription": "Athletly kann Trainingsdaten in Apple Health schreiben."
         }
       ]
     ],

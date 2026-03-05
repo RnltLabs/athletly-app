@@ -21,3 +21,11 @@ export type {
   HealthTrend,
   ConnectedService,
 } from './health';
+
+export type {
+  TrackingIntensity,
+  SportOption,
+  BodyPartOption,
+  QuickLogEntry,
+  TrackedActivity,
+} from './tracking';

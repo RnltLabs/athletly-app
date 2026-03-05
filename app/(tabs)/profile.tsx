@@ -6,12 +6,13 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, Platform } from 'react-native';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { Colors } from '@/lib/colors';
 import {
   Watch,
   Smartphone,
+  Heart,
   Bell,
   Globe,
   Mail,
@@ -22,6 +23,8 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { useHealthStore } from '@/store/healthStore';
 import { useAuth } from '@/hooks/useAuth';
+import { useAppleHealth } from '@/hooks/useAppleHealth';
+import { useHealthConnect } from '@/hooks/useHealthConnect';
 import { apiGet, apiPost, apiDelete } from '@/lib/api';
 import { Card } from '@/components/ui';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
@@ -45,6 +48,9 @@ export default function ProfileScreen() {
   const [garminStatus, setGarminStatus] = useState<GarminStatus>({ connected: false });
   const [garminLoading, setGarminLoading] = useState(false);
   const [showGarminModal, setShowGarminModal] = useState(false);
+
+  const appleHealth = useAppleHealth();
+  const healthConnect = useHealthConnect();
 
   const email = user?.email ?? '';
   const createdAt = user?.created_at;
@@ -130,6 +136,96 @@ export default function ProfileScreen() {
   }, [user?.id, fetchConnectedServices, loadGarminStatus]);
 
   /**
+   * Connect Apple Health — request permissions and initial sync.
+   */
+  const handleAppleHealthConnect = useCallback(async () => {
+    const success = await appleHealth.connect();
+    if (!success && appleHealth.error) {
+      Alert.alert('Apple Health', appleHealth.error);
+    }
+  }, [appleHealth]);
+
+  /**
+   * Manual Apple Health sync.
+   */
+  const handleAppleHealthSync = useCallback(async () => {
+    await appleHealth.sync();
+    if (appleHealth.error) {
+      Alert.alert('Sync fehlgeschlagen', 'Apple Health Daten konnten nicht synchronisiert werden.');
+    }
+  }, [appleHealth]);
+
+  /**
+   * Disconnect Apple Health with confirmation.
+   */
+  const handleAppleHealthDisconnect = useCallback(() => {
+    Alert.alert(
+      'Apple Health trennen',
+      'Moechtest du die Verbindung zu Apple Health wirklich trennen? Die Berechtigung muss separat in den iOS-Einstellungen widerrufen werden.',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Trennen',
+          style: 'destructive',
+          onPress: async () => {
+            await appleHealth.disconnect();
+            if (user?.id) {
+              fetchConnectedServices(user.id);
+            }
+          },
+        },
+      ],
+    );
+  }, [appleHealth, user?.id, fetchConnectedServices]);
+
+  /**
+   * Connect Health Connect — request permissions and initial sync.
+   */
+  const handleHealthConnectConnect = useCallback(async () => {
+    const success = await healthConnect.connect();
+    if (!success && healthConnect.error) {
+      Alert.alert('Health Connect', healthConnect.error);
+    }
+  }, [healthConnect]);
+
+  /**
+   * Manual Health Connect sync.
+   */
+  const handleHealthConnectSync = useCallback(async () => {
+    await healthConnect.sync();
+    if (healthConnect.error) {
+      Alert.alert('Sync fehlgeschlagen', 'Health Connect Daten konnten nicht synchronisiert werden.');
+    }
+  }, [healthConnect]);
+
+  /**
+   * Disconnect Health Connect with confirmation.
+   */
+  const handleHealthConnectDisconnect = useCallback(() => {
+    Alert.alert(
+      'Health Connect trennen',
+      'Moechtest du die Verbindung zu Health Connect wirklich trennen?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Trennen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await healthConnect.disconnect();
+              if (user?.id) {
+                fetchConnectedServices(user.id);
+              }
+            } catch {
+              Alert.alert('Fehler', 'Verbindung konnte nicht getrennt werden.');
+            }
+          },
+        },
+      ],
+    );
+  }, [healthConnect, user?.id, fetchConnectedServices]);
+
+  /**
    * Logout with confirmation dialog.
    */
   const handleLogout = useCallback(() => {
@@ -177,14 +273,61 @@ export default function ProfileScreen() {
             isLoading={garminLoading}
           />
           <View className="h-px ml-14" style={{ backgroundColor: Colors.divider }} />
-          <ServiceStatus
-            name="Apple Health"
-            icon={Smartphone}
-            isConnected={false}
-          />
-          <View className="py-1.5 px-4">
-            <Text className="text-xs text-text-muted ml-11">Demnaechst</Text>
-          </View>
+          {Platform.OS === 'ios' && appleHealth.available ? (
+            <ServiceStatus
+              name="Apple Health"
+              icon={Smartphone}
+              isConnected={appleHealth.connected}
+              lastSync={appleHealth.lastSync ?? undefined}
+              onConnect={handleAppleHealthConnect}
+              onSync={handleAppleHealthSync}
+              onDisconnect={handleAppleHealthDisconnect}
+              isLoading={appleHealth.syncing}
+            />
+          ) : Platform.OS !== 'android' ? (
+            <>
+              <ServiceStatus
+                name="Apple Health"
+                icon={Smartphone}
+                isConnected={false}
+              />
+              <View className="py-1.5 px-4">
+                <Text className="text-xs text-text-muted ml-11">
+                  Nicht verfuegbar
+                </Text>
+              </View>
+            </>
+          ) : null}
+          {Platform.OS === 'android' && (
+            <>
+              <View className="h-px ml-14" style={{ backgroundColor: Colors.divider }} />
+              {healthConnect.isAvailable ? (
+                <ServiceStatus
+                  name="Health Connect"
+                  icon={Heart}
+                  isConnected={healthConnect.isConnected}
+                  lastSync={healthConnect.lastSync ?? undefined}
+                  onConnect={handleHealthConnectConnect}
+                  onSync={handleHealthConnectSync}
+                  onDisconnect={handleHealthConnectDisconnect}
+                  isLoading={healthConnect.isSyncing}
+                />
+              ) : (
+                <>
+                  <ServiceStatus
+                    name="Health Connect"
+                    icon={Heart}
+                    isConnected={false}
+                  />
+                  <View className="py-1.5 px-4">
+                    <Text className="text-xs text-text-muted ml-11">
+                      Health Connect nicht verfuegbar
+                    </Text>
+                  </View>
+                </>
+              )}
+            </>
+          )}
         </Card>
 
         {/* Einstellungen */}

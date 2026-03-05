@@ -25,7 +25,7 @@ export interface HealthTrend {
 }
 
 export interface ConnectedService {
-  provider: string;            // 'garmin', 'apple_health'
+  provider: string;            // 'garmin', 'apple_health', 'health_connect'
   connected: boolean;
   lastSync?: string;
 }

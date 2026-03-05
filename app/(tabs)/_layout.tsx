@@ -1,14 +1,14 @@
 /**
  * Tab Layout — Athletly V2
  *
- * Bottom tab navigation with 4 tabs:
- * Today (Home), Plan, Coach, Profil.
+ * Bottom tab navigation with 5 tabs:
+ * Today (Home), Plan, Coach, Tracking, Profil.
  * Light HubFit-inspired theme.
  * Wrapped in ErrorBoundary for graceful crash handling.
  */
 
 import { Tabs } from 'expo-router';
-import { Home, Calendar, MessageCircle, User } from 'lucide-react-native';
+import { Home, Calendar, MessageCircle, Timer, User } from 'lucide-react-native';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Colors } from '@/lib/colors';
 
@@ -59,6 +59,13 @@ export default function TabLayout() {
             tabBarIcon: ({ color, size }) => (
               <MessageCircle size={size} color={color} />
             ),
+          }}
+        />
+        <Tabs.Screen
+          name="tracking"
+          options={{
+            title: 'Tracking',
+            tabBarIcon: ({ color, size }) => <Timer size={size} color={color} />,
           }}
         />
         <Tabs.Screen

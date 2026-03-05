@@ -17,6 +17,7 @@ interface HealthState {
 
   fetchMetrics: (userId: string) => Promise<void>;
   fetchConnectedServices: (userId: string) => Promise<void>;
+  isAppleHealthConnected: () => boolean;
   clear: () => void;
 }
 
@@ -27,7 +28,7 @@ function getToday(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-export const useHealthStore = create<HealthState>((set) => ({
+export const useHealthStore = create<HealthState>((set, get) => ({
   metrics: null,
   trends: [],
   connectedServices: [],
@@ -96,6 +97,11 @@ export const useHealthStore = create<HealthState>((set) => ({
     } catch (err) {
       console.error('[healthStore] Failed to fetch connected services:', err);
     }
+  },
+
+  isAppleHealthConnected: (): boolean => {
+    const services = get().connectedServices;
+    return services.some((s: ConnectedService) => s.provider === 'apple_health' && s.connected);
   },
 
   clear: () => set({ metrics: null, trends: [], connectedServices: [] }),
