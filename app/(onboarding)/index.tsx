@@ -33,6 +33,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useChatStream } from '@/hooks/useChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { Colors } from '@/lib/colors';
+import { apiGet } from '@/lib/api';
 import type { ChatMessage, StreamMessage, StreamProgress } from '@/types/chat';
 
 /**
@@ -141,17 +142,40 @@ function QuickReplies({
 // Main Screen
 // ---------------------------------------------------------------------------
 
-/** Default quick replies for common onboarding questions. */
-const SPORT_REPLIES = ['Laufen', 'Radfahren', 'Schwimmen', 'Gym', 'Yoga'];
-const GOAL_REPLIES = ['Fitness verbessern', 'Abnehmen', 'Wettkampf', 'Gesundheit'];
-const FREQUENCY_REPLIES = ['3x pro Woche', '4x pro Woche', '5x pro Woche', 'Taeglich'];
+/** Fallback quick replies when the backend is unreachable. */
+const FALLBACK_SPORT_REPLIES = ['Laufen', 'Radfahren', 'Schwimmen', 'Gym', 'Yoga'];
+const FALLBACK_GOAL_REPLIES = ['Fitness verbessern', 'Abnehmen', 'Wettkampf', 'Gesundheit'];
+const FALLBACK_FREQUENCY_REPLIES = ['3x pro Woche', '4x pro Woche', '5x pro Woche', 'Taeglich'];
 
-function getQuickReplies(messageCount: number): string[] {
+interface OnboardingSuggestions {
+  readonly sports: readonly string[];
+  readonly goals: readonly string[];
+  readonly frequencies: readonly string[];
+}
+
+const FALLBACK_SUGGESTIONS: OnboardingSuggestions = {
+  sports: FALLBACK_SPORT_REPLIES,
+  goals: FALLBACK_GOAL_REPLIES,
+  frequencies: FALLBACK_FREQUENCY_REPLIES,
+};
+
+async function fetchSuggestions(): Promise<OnboardingSuggestions> {
+  try {
+    return await apiGet<OnboardingSuggestions>('/api/onboarding/suggestions');
+  } catch {
+    return FALLBACK_SUGGESTIONS;
+  }
+}
+
+function getQuickReplies(
+  messageCount: number,
+  suggestions: OnboardingSuggestions,
+): string[] {
   // Simple heuristic: show sport replies early, goals mid, frequency later
   if (messageCount < 4) return [];
-  if (messageCount < 8) return SPORT_REPLIES;
-  if (messageCount < 12) return GOAL_REPLIES;
-  if (messageCount < 16) return FREQUENCY_REPLIES;
+  if (messageCount < 8) return [...suggestions.sports];
+  if (messageCount < 12) return [...suggestions.goals];
+  if (messageCount < 16) return [...suggestions.frequencies];
   return [];
 }
 
@@ -183,6 +207,7 @@ export default function OnboardingScreen() {
   } = useVoiceInput();
 
   const [inputText, setInputText] = useState('');
+  const [suggestions, setSuggestions] = useState<OnboardingSuggestions>(FALLBACK_SUGGESTIONS);
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
   const hasSentInitialRef = useRef(false);
 
@@ -190,6 +215,17 @@ export default function OnboardingScreen() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
+
+  // Fetch dynamic suggestions on mount (non-blocking, falls back to static list)
+  useEffect(() => {
+    let cancelled = false;
+    fetchSuggestions().then((result) => {
+      if (!cancelled) {
+        setSuggestions(result);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Sync voice transcript to input
   useEffect(() => {
@@ -292,7 +328,7 @@ export default function OnboardingScreen() {
     }
   }, [isListening, startListening, stopListening]);
 
-  const quickReplies = getQuickReplies(messages.length);
+  const quickReplies = getQuickReplies(messages.length, suggestions);
   const canSend = inputText.trim().length > 0 && !isStreaming;
 
   const renderMessage = useCallback(

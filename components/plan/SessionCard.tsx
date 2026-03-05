@@ -10,7 +10,7 @@
 import React from 'react';
 import { View, Text, Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
-import { Clock } from 'lucide-react-native';
+import { Clock, HelpCircle, ThumbsDown, Calendar } from 'lucide-react-native';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/lib/colors';
@@ -21,7 +21,14 @@ interface SessionCardProps {
   session: PlannedSession;
   onStart?: () => void;
   onDetails?: () => void;
+  onQuickAction?: (action: string, message: string) => void;
 }
+
+const QUICK_ACTIONS = [
+  { key: 'why', label: 'Warum?', message: 'Warum habe ich heute dieses Training im Plan?', icon: HelpCircle },
+  { key: 'too_hard', label: 'Zu hart', message: 'Das Training heute ist mir zu hart. Kannst du es anpassen?', icon: ThumbsDown },
+  { key: 'reschedule', label: 'Verschieben', message: 'Kann ich das Training heute verschieben?', icon: Calendar },
+] as const;
 
 const INTENSITY_LABELS: Record<string, string> = {
   low: 'Leicht',
@@ -109,7 +116,7 @@ function GlassBackground({ children }: { readonly children: React.ReactNode }) {
   );
 }
 
-export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
+export function SessionCard({ session, onStart, onDetails, onQuickAction }: SessionCardProps) {
   const sportColor = getSportColor(session.sport);
   const intensityLabel = INTENSITY_LABELS[session.intensity] ?? DEFAULT_INTENSITY_LABEL;
   const typeLabel = getSessionTypeLabel(session.session_type);
@@ -151,6 +158,22 @@ export function SessionCard({ session, onStart, onDetails }: SessionCardProps) {
             </View>
           )}
         </View>
+
+        {/* Quick action buttons */}
+        {onQuickAction && (
+          <View className="flex-row items-center gap-2 mb-3">
+            {QUICK_ACTIONS.map((action) => (
+              <Button
+                key={action.key}
+                variant="ghost"
+                size="sm"
+                label={action.label}
+                icon={action.icon}
+                onPress={() => onQuickAction(action.key, action.message)}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Action buttons */}
         <View className="flex-row items-center justify-end gap-2">

@@ -155,6 +155,13 @@ export default function PlanScreen() {
     router.push('/(tabs)/coach');
   }, [router]);
 
+  const handleQuickAction = useCallback(
+    (_action: string, message: string) => {
+      router.push({ pathname: '/(tabs)/coach', params: { prefill: message } });
+    },
+    [router],
+  );
+
   return (
     <View className="flex-1 bg-background">
       <GradientHeader title="Trainingsplan" />
@@ -228,16 +235,35 @@ export default function PlanScreen() {
                 </Text>
               </View>
             ) : sessionsForDay.length === 0 ? (
-              <RestDayCard message={selectedDay?.rest_reason} />
+              <RestDayCard
+                message={selectedDay?.rest_reason}
+                agentTip={selectedDay?.agentTip}
+              />
             ) : (
               sessionsForDay.map((session, index) => (
-                <SessionCard key={`${selectedDate}-${session.sport}-${index}`} session={session} />
+                <View key={`${selectedDate}-${session.sport}-${index}`}>
+                  <SessionCard
+                    session={session}
+                    onQuickAction={handleQuickAction}
+                    onStart={() =>
+                      router.push({
+                        pathname: '/workout/live',
+                        params: {
+                          sessionId: session.id ?? '',
+                          sport: session.sport,
+                          sessionType: session.session_type,
+                          targetDuration: String(session.duration_minutes),
+                          intensity: session.intensity,
+                          description: session.description,
+                        },
+                      })
+                    }
+                  />
+                  {session.id ? (
+                    <ProductBar sessionId={session.id} />
+                  ) : null}
+                </View>
               ))
-            )}
-
-            {/* Product Recommendations */}
-            {planMatchesWeek && currentPlan && (
-              <ProductBar planId={currentPlan.id} />
             )}
 
             {/* Weekly Summary */}

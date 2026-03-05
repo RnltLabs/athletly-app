@@ -20,6 +20,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { useChatStore } from '@/store/chatStore';
 import { useAuthStore } from '@/store/authStore';
@@ -57,10 +58,12 @@ export default function CoachScreen() {
   const { sendMessage, isStreaming, progress, toolsUsed } = useChatStream();
   const voice = useVoiceInput();
 
+  const { prefill } = useLocalSearchParams<{ prefill?: string }>();
   const [agentStatus, setAgentStatus] = useState('');
   const [agentTool, setAgentTool] = useState<string | undefined>(undefined);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const flatListRef = useRef<FlatList>(null);
+  const prefillHandled = useRef(false);
 
   // Load messages on mount
   useEffect(() => {
@@ -135,6 +138,14 @@ export default function CoachScreen() {
     },
     [sessionId, sendMessage, addMessage, setSessionId, setTyping, setPendingCheckpoint, toolsUsed],
   );
+
+  // Auto-send prefilled message from Quick Actions
+  useEffect(() => {
+    if (prefill && !prefillHandled.current) {
+      prefillHandled.current = true;
+      handleSend(prefill);
+    }
+  }, [prefill, handleSend]);
 
   const handleQuickReply = useCallback(
     (reply: string) => {

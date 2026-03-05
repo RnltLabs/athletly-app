@@ -13,6 +13,7 @@ export interface SessionDetails {
 }
 
 export interface PlannedSession {
+  readonly id?: string;
   readonly sport: string;
   readonly duration_minutes: number;
   readonly intensity: Intensity;
@@ -26,6 +27,7 @@ export interface DayPlan {
   readonly day_name: string;       // e.g. "Montag"
   readonly sessions: readonly PlannedSession[];
   readonly rest_reason?: string;   // optional reason when sessions is empty
+  readonly agentTip?: string;      // optional AI coach recovery tip
 }
 
 export interface WeeklyPlan {

@@ -11,6 +11,7 @@ import { View, Text, Pressable } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Moon } from 'lucide-react-native';
 import { getSportColor } from '@/lib/sport-colors';
+import { getSportIcon } from '@/lib/sport-icons';
 import { Colors } from '@/lib/colors';
 import type { DayPlan } from '@/types/plan';
 
@@ -72,9 +73,10 @@ interface ProgressRingProps {
   readonly ringColor: string;
   readonly isRest: boolean;
   readonly dayNumber: number;
+  readonly sessions: readonly import('@/types/plan').PlannedSession[];
 }
 
-function ProgressRing({ size, progress, ringColor, isRest, dayNumber }: ProgressRingProps) {
+function ProgressRing({ size, progress, ringColor, isRest, dayNumber, sessions }: ProgressRingProps) {
   const center = size / 2;
   const clampedProgress = Math.min(100, Math.max(0, progress));
   const strokeDashoffset = RING_CIRCUMFERENCE * (1 - clampedProgress / 100);
@@ -108,20 +110,20 @@ function ProgressRing({ size, progress, ringColor, isRest, dayNumber }: Progress
           />
         )}
       </Svg>
-      {/* Center content: moon for rest, day number for active */}
+      {/* Center content: moon for rest, sport icon for training days */}
       <View style={{ position: 'absolute', alignItems: 'center', justifyContent: 'center' }}>
         {isRest ? (
           <Moon size={12} color={Colors.textMuted} strokeWidth={2} />
         ) : (
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: '600',
-              color: clampedProgress > 0 ? ringColor : Colors.textSecondary,
-            }}
-          >
-            {dayNumber}
-          </Text>
+          (() => {
+            const SportIcon = sessions.length > 0
+              ? getSportIcon(sessions[0].sport)
+              : getSportIcon('');
+            const iconColor = sessions.length > 0
+              ? getSportColor(sessions[0].sport)
+              : Colors.textSecondary;
+            return <SportIcon size={14} color={iconColor} strokeWidth={2} />;
+          })()
         )}
       </View>
     </View>
@@ -173,6 +175,7 @@ export function WeekStrip({ weekStart, days, selectedDate, onSelectDate }: WeekS
               ringColor={ringColor}
               isRest={isRest}
               dayNumber={dayNumber}
+              sessions={daySessions}
             />
 
             {isToday && (

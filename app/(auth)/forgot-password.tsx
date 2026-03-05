@@ -1,8 +1,8 @@
 /**
- * Login Screen — Athletly V2
+ * Forgot Password Screen — Athletly V2
  *
- * Design spec section 7.6.
- * Email + password sign-in with German UI labels.
+ * Sends a password-reset link via Supabase.
+ * German UI labels, matches login screen design.
  */
 
 import { useState, useCallback } from 'react';
@@ -22,35 +22,34 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/lib/colors';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
 
-  const { signIn, isLoading } = useAuth();
+  const { resetPassword, isLoading } = useAuth();
   const router = useRouter();
 
-  const handleSignIn = useCallback(async () => {
+  const handleReset = useCallback(async () => {
     setError(null);
 
     if (!email.trim()) {
       setError('Bitte gib deine E-Mail-Adresse ein.');
       return;
     }
-    if (!password) {
-      setError('Bitte gib dein Passwort ein.');
+
+    const result = await resetPassword(email);
+
+    if (!result.success) {
+      setError(result.error ?? 'Ein Fehler ist aufgetreten.');
       return;
     }
 
-    const result = await signIn(email, password);
-    if (!result.success) {
-      setError(result.error ?? 'Ein Fehler ist aufgetreten.');
-    }
-    // On success, auth state change triggers auto-redirect via root layout guard
-  }, [email, password, signIn]);
+    setSent(true);
+  }, [email, resetPassword]);
 
-  const navigateToRegister = useCallback(() => {
-    router.push('/(auth)/register');
+  const navigateToLogin = useCallback(() => {
+    router.back();
   }, [router]);
 
   return (
@@ -87,7 +86,7 @@ export default function LoginScreen() {
               </Text>
             </View>
 
-            {/* White card for form */}
+            {/* White card */}
             <View
               className="bg-white rounded-t-3xl flex-1 px-6 pt-8"
               style={{
@@ -99,71 +98,65 @@ export default function LoginScreen() {
               }}
             >
               {/* Heading */}
-              <Text className="text-text-primary text-xl font-semibold mb-6">
-                Willkommen zurueck
+              <Text className="text-text-primary text-xl font-semibold mb-2">
+                Passwort zuruecksetzen
+              </Text>
+              <Text className="text-text-secondary text-sm mb-6">
+                Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zuruecksetzen.
               </Text>
 
-              {/* Error banner */}
-              {error && (
-                <View className="bg-error/10 border border-error/30 rounded-xl px-4 py-3 mb-4">
-                  <Text className="text-error text-sm">{error}</Text>
+              {sent ? (
+                /* Success state */
+                <View className="bg-green-50 border border-green-200 rounded-xl px-4 py-4 mb-6">
+                  <Text className="text-green-800 text-sm leading-5">
+                    Wir haben dir einen Link zum Zuruecksetzen gesendet. Bitte pruefe dein
+                    E-Mail-Postfach.
+                  </Text>
                 </View>
+              ) : (
+                <>
+                  {/* Error banner */}
+                  {error && (
+                    <View className="bg-error/10 border border-error/30 rounded-xl px-4 py-3 mb-4">
+                      <Text className="text-error text-sm">{error}</Text>
+                    </View>
+                  )}
+
+                  {/* Email input */}
+                  <View className="mb-6">
+                    <Input
+                      label="E-Mail"
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="name@beispiel.de"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      autoComplete="email"
+                      returnKeyType="done"
+                      editable={!isLoading}
+                      onSubmitEditing={handleReset}
+                    />
+                  </View>
+
+                  {/* Submit button */}
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    label="Link senden"
+                    onPress={handleReset}
+                    loading={isLoading}
+                    disabled={isLoading}
+                  />
+                </>
               )}
 
-              {/* Email input */}
-              <View className="mb-4">
-                <Input
-                  label="E-Mail"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="name@beispiel.de"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoComplete="email"
-                  returnKeyType="next"
-                  editable={!isLoading}
-                />
-              </View>
-
-              {/* Password input */}
-              <View className="mb-6">
-                <Input
-                  label="Passwort"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Dein Passwort"
-                  isPassword
-                  autoCapitalize="none"
-                  autoComplete="password"
-                  returnKeyType="done"
-                  editable={!isLoading}
-                  onSubmitEditing={handleSignIn}
-                />
-              </View>
-
-              {/* Sign in button */}
-              <Button
-                variant="primary"
-                size="lg"
-                label="Anmelden"
-                onPress={handleSignIn}
-                loading={isLoading}
-                disabled={isLoading}
-              />
-
-              {/* Links */}
-              <View className="items-center mt-6 gap-3">
-                <Pressable onPress={navigateToRegister}>
+              {/* Back to login */}
+              <View className="items-center mt-6">
+                <Pressable onPress={navigateToLogin}>
                   <Text className="text-text-secondary text-sm">
-                    Kein Account?{' '}
-                    <Text className="text-primary font-medium">Registrieren</Text>
-                  </Text>
-                </Pressable>
-
-                <Pressable onPress={() => router.push('/(auth)/forgot-password')}>
-                  <Text className="text-text-muted text-sm">
-                    Passwort vergessen?
+                    Zurueck zur{' '}
+                    <Text className="text-primary font-medium">Anmeldung</Text>
                   </Text>
                 </Pressable>
               </View>
