@@ -22,14 +22,14 @@ interface AuthState {
 }
 
 /**
- * Check if user has completed onboarding by querying user_models table.
- * If a row exists for this user, they are onboarded.
+ * Check if user has completed onboarding by querying profiles table.
+ * The profiles table has an `onboarding_complete` boolean column.
  */
 async function checkOnboardingStatus(userId: string): Promise<boolean> {
   try {
     const { data, error } = await supabase
-      .from('user_models')
-      .select('id')
+      .from('profiles')
+      .select('onboarding_complete')
       .eq('user_id', userId)
       .limit(1)
       .maybeSingle();
@@ -39,7 +39,7 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
       return false;
     }
 
-    return data !== null;
+    return data?.onboarding_complete === true;
   } catch (err) {
     console.warn('[authStore] Failed to check onboarding:', err);
     return false;
@@ -56,8 +56,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: () => {
     set({ isLoading: true });
 
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Get initial session — clear stale tokens gracefully
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      if (error) {
+        console.warn('[authStore] Stale session, signing out:', error.message);
+        await supabase.auth.signOut();
+        set({
+          user: null,
+          session: null,
+          isOnboarded: false,
+          isLoading: false,
+          isInitialized: true,
+        });
+        return;
+      }
+
       if (session?.user) {
         const onboarded = await checkOnboardingStatus(session.user.id);
         set({

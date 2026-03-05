@@ -18,6 +18,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useAuthStore } from '@/store/authStore';
+import { supabase } from '@/lib/supabase';
 import type {
   StreamProgress,
   StreamMessage,
