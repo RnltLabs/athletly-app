@@ -1,36 +1,61 @@
 {
   "expo": {
-    "name": "athletly-v2",
+    "name": "Athletly",
     "slug": "athletly-v2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "scheme": "athletly",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#09090B"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.athletly.app",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "This app uses speech recognition for voice input to chat with your AI coach.",
+        "NSMicrophoneUsageDescription": "This app uses the microphone for voice input to chat with your AI coach."
+      }
     },
     "android": {
+      "package": "com.athletly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#09090B",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-font",
       "expo-secure-store",
-      "expo-speech-recognition"
-    ]
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#3B82F6"
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "This app uses the microphone for voice input to chat with your AI coach.",
+          "speechRecognitionPermission": "This app uses speech recognition for voice input to chat with your AI coach."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
