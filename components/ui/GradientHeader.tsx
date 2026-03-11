@@ -20,9 +20,9 @@ export function GradientHeader({ title, subtitle, rightContent, children }: Grad
         colors={['#2563EB', '#4F46E5', '#7C3AED']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={{ paddingTop: insets.top, minHeight: 200 + insets.top }}
+        style={{ paddingTop: insets.top }}
       >
-        <View className="px-4 pt-4 pb-16">
+        <View className="px-4 pt-2 pb-4">
           <View className="flex-row items-start justify-between">
             <View className="flex-1">
               {title && (

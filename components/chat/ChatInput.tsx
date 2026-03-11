@@ -2,7 +2,7 @@
  * ChatInput — Athletly V2
  *
  * Chat input bar at the bottom of the coach screen.
- * - TextInput with auto-grow (up to 4 lines)
+ * - TextInput with auto-grow (up to 5 lines, then scrolls internally)
  * - Mic button for voice input (pulsing red when recording)
  * - Send button (visible only when text is non-empty)
  * - Safe area padding at bottom
@@ -23,9 +23,11 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-const MAX_INPUT_LINES = 4;
+const MAX_INPUT_LINES = 5;
 const LINE_HEIGHT = 20;
-const MAX_INPUT_HEIGHT = MAX_INPUT_LINES * LINE_HEIGHT + 24; // + padding
+const VERTICAL_PADDING = 16; // 8px top + 8px bottom (py-2)
+const MIN_INPUT_HEIGHT = LINE_HEIGHT + VERTICAL_PADDING;
+const MAX_INPUT_HEIGHT = MAX_INPUT_LINES * LINE_HEIGHT + VERTICAL_PADDING;
 
 function PulsingMic({ onPress }: { onPress: () => void }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -73,7 +75,7 @@ export function ChatInput({
   disabled = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
-  const [inputHeight, setInputHeight] = useState(LINE_HEIGHT + 24);
+  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -89,7 +91,7 @@ export function ChatInput({
     if (trimmed.length === 0) return;
     onSend(trimmed);
     setText('');
-    setInputHeight(LINE_HEIGHT + 24);
+    setInputHeight(MIN_INPUT_HEIGHT);
   };
 
   const handleMicPress = () => {
@@ -128,8 +130,12 @@ export function ChatInput({
 
         {/* Text input */}
         <View
-          className="flex-1 rounded-2xl px-4 py-2 justify-center"
-          style={{ backgroundColor: '#F5F6F8', minHeight: 40, maxHeight: MAX_INPUT_HEIGHT }}
+          className="flex-1 rounded-2xl px-4"
+          style={{
+            backgroundColor: '#F5F6F8',
+            height: inputHeight,
+            maxHeight: MAX_INPUT_HEIGHT,
+          }}
         >
           <TextInput
             ref={inputRef}
@@ -141,16 +147,20 @@ export function ChatInput({
             onSubmitEditing={handleSend}
             multiline
             scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
+            textAlignVertical="center"
             onContentSizeChange={(e) => {
-              const height = Math.min(
-                e.nativeEvent.contentSize.height + 16,
-                MAX_INPUT_HEIGHT,
+              const contentHeight = e.nativeEvent.contentSize.height;
+              const newHeight = Math.max(
+                MIN_INPUT_HEIGHT,
+                Math.min(contentHeight + VERTICAL_PADDING, MAX_INPUT_HEIGHT),
               );
-              setInputHeight(height);
+              setInputHeight(newHeight);
             }}
             style={{
-              height: Math.min(inputHeight - 16, MAX_INPUT_HEIGHT - 16),
+              flex: 1,
               lineHeight: LINE_HEIGHT,
+              paddingTop: 8,
+              paddingBottom: 8,
             }}
             editable={!disabled}
             returnKeyType="default"
