@@ -255,6 +255,26 @@ export function useChatStream(): UseChatStreamResult {
           });
 
           es.addEventListener('error', (event: any) => {
+            // When the app is backgrounded on iOS, the OS kills the SSE
+            // connection. xhrStatus 200 + "connection was lost" means the
+            // request was successful but the socket was dropped — treat
+            // this as a graceful end, not an error.
+            const isBackgroundDisconnect =
+              event.xhrStatus === 200 &&
+              typeof event.message === 'string' &&
+              event.message.toLowerCase().includes('connection was lost');
+
+            if (isBackgroundDisconnect) {
+              console.log('[useChatStream] Connection lost (app backgrounded) — closing gracefully');
+              es.close();
+              setIsStreaming(false);
+              setStreamActive(false);
+              setProgress(null);
+              eventSourceRef.current = null;
+              resolve();
+              return;
+            }
+
             console.error('[useChatStream] SSE Error:', event);
 
             if (event.data) {
