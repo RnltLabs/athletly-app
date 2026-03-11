@@ -12,7 +12,10 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { log } from '@/lib/logger';
 import type { WeeklyPlan, DayPlan } from '@/types/plan';
+
+const TAG = 'PlanStore';
 
 interface PlanState {
   readonly currentPlan: WeeklyPlan | null;
@@ -69,9 +72,11 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
   fetchPlan: async (userId) => {
     set({ isLoading: true, error: null });
+    const endTimer = log.time(TAG, 'fetchPlan');
 
     try {
       const mondayDate = getCurrentMonday();
+      log.debug(TAG, 'Fetching plan', { userId: userId.slice(0, 8), weekStart: mondayDate });
 
       const { data, error } = await supabase
         .from('weekly_plans')
@@ -86,7 +91,9 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         throw error;
       }
 
+      endTimer();
       if (data) {
+        log.info(TAG, 'Plan loaded', { days: Array.isArray(data.days) ? (data.days as unknown[]).length : 0 });
         const plan: WeeklyPlan = {
           id: data.id,
           userId: data.user_id,
@@ -99,10 +106,12 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         };
         set({ currentPlan: plan, isLoading: false });
       } else {
+        log.info(TAG, 'No plan found for this week');
         set({ currentPlan: null, isLoading: false });
       }
     } catch (err) {
-      console.error('[planStore] Error fetching plan:', err);
+      endTimer();
+      log.error(TAG, 'Error fetching plan', { error: String(err) });
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Fehler beim Laden des Plans',

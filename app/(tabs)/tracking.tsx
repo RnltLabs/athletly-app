@@ -37,7 +37,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useTrackingStore, isGymSport } from '@/store/trackingStore';
 import { getSportColor } from '@/lib/sport-colors';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
 import type { TrackingIntensity } from '@/types/tracking';
+
+const TAG = 'TrackingScreen';
 
 // --- Intensity Config ---
 
@@ -107,9 +110,15 @@ export default function TrackingScreen() {
 
   const [showSuccess, setShowSuccess] = useState(false);
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+    return () => log.info(TAG, 'Screen unmounted');
+  }, []);
+
   // Fetch data on mount
   useEffect(() => {
     if (user?.id) {
+      log.info(TAG, 'Fetching sports, body parts, activities');
       fetchSports(user.id);
       fetchBodyParts(user.id);
       fetchRecentActivities(user.id);
@@ -129,12 +138,18 @@ export default function TrackingScreen() {
   // Save handler
   const handleSave = useCallback(async () => {
     if (!user?.id) return;
+    log.info(TAG, 'Saving activity', { sport: selectedSport, duration: durationMinutes, intensity });
+    const endTimer = log.time(TAG, 'saveActivity');
     const success = await saveActivity(user.id);
+    endTimer();
     if (success) {
+      log.info(TAG, 'Activity saved successfully');
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 2500);
+    } else {
+      log.warn(TAG, 'Activity save failed');
     }
-  }, [user?.id, saveActivity]);
+  }, [user?.id, saveActivity, selectedSport, durationMinutes, intensity]);
 
   // Cancel handler
   const handleCancel = useCallback(() => {

@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { WeekStrip } from '@/components/plan/WeekStrip';
 import { SessionCard } from '@/components/plan/SessionCard';
@@ -23,6 +24,8 @@ import { RestDayCard } from '@/components/plan/RestDayCard';
 import { WeeklySummary } from '@/components/plan/WeeklySummary';
 import { ProductBar } from '@/components/plan/ProductBar';
 import type { DayPlan, PlannedSession } from '@/types/plan';
+
+const TAG = 'PlanScreen';
 
 // --- Date Utilities ---
 
@@ -109,9 +112,15 @@ export default function PlanScreen() {
   const weekRange = useMemo(() => formatWeekRange(weekStart), [weekStart]);
   const isCurrentWeek = weekOffset === 0;
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+    return () => log.info(TAG, 'Screen unmounted');
+  }, []);
+
   // Fetch plan on mount
   useEffect(() => {
     if (user?.id) {
+      log.info(TAG, 'Fetching plan');
       fetchPlan(user.id);
     }
   }, [user?.id, fetchPlan]);

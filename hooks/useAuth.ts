@@ -9,7 +9,10 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { log } from '@/lib/logger';
 import type { AuthError } from '@supabase/supabase-js';
+
+const TAG = 'useAuth';
 
 interface AuthResult {
   success: boolean;
@@ -49,18 +52,25 @@ export function useAuth() {
 
   const signIn = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
+    log.info(TAG, 'signIn called', { email: email.trim().toLowerCase() });
+    const endTimer = log.time(TAG, 'signInWithPassword');
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim().toLowerCase(),
         password,
       });
+      endTimer();
 
       if (error) {
+        log.warn(TAG, 'signIn error', { message: error.message, status: error.status });
         return { success: false, error: getErrorMessage(error) };
       }
 
+      log.info(TAG, 'signIn successful');
       return { success: true };
-    } catch {
+    } catch (err) {
+      endTimer();
+      log.error(TAG, 'signIn exception', { error: String(err) });
       return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
     } finally {
       setIsLoading(false);
@@ -69,6 +79,8 @@ export function useAuth() {
 
   const signUp = useCallback(async (email: string, password: string): Promise<AuthResult> => {
     setIsLoading(true);
+    log.info(TAG, 'signUp called', { email: email.trim().toLowerCase() });
+    const endTimer = log.time(TAG, 'signUp');
     try {
       const { error } = await supabase.auth.signUp({
         email: email.trim().toLowerCase(),
@@ -77,13 +89,18 @@ export function useAuth() {
           emailRedirectTo: undefined,
         },
       });
+      endTimer();
 
       if (error) {
+        log.warn(TAG, 'signUp error', { message: error.message });
         return { success: false, error: getErrorMessage(error) };
       }
 
+      log.info(TAG, 'signUp successful');
       return { success: true };
-    } catch {
+    } catch (err) {
+      endTimer();
+      log.error(TAG, 'signUp exception', { error: String(err) });
       return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
     } finally {
       setIsLoading(false);
@@ -92,16 +109,20 @@ export function useAuth() {
 
   const signOut = useCallback(async (): Promise<AuthResult> => {
     setIsLoading(true);
+    log.info(TAG, 'signOut called');
     try {
       const { error } = await supabase.auth.signOut();
 
       if (error) {
+        log.warn(TAG, 'signOut error', { message: error.message });
         return { success: false, error: getErrorMessage(error) };
       }
 
+      log.info(TAG, 'signOut successful');
       reset();
       return { success: true };
-    } catch {
+    } catch (err) {
+      log.error(TAG, 'signOut exception', { error: String(err) });
       return { success: false, error: 'Ein unerwarteter Fehler ist aufgetreten.' };
     } finally {
       setIsLoading(false);

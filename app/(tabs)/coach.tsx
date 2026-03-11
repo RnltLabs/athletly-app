@@ -31,7 +31,10 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { AgentStatus } from '@/components/chat/AgentStatus';
 import { CheckpointCard } from '@/components/chat/CheckpointCard';
 import { QuickReplies } from '@/components/chat/QuickReplies';
+import { log } from '@/lib/logger';
 import type { ChatMessage, StreamProgress } from '@/types/chat';
+
+const TAG = 'CoachScreen';
 
 const WELCOME_REPLIES = [
   'Erstelle einen Trainingsplan',
@@ -65,9 +68,15 @@ export default function CoachScreen() {
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted', { userId: user?.id?.slice(0, 8) });
+    return () => log.info(TAG, 'Screen unmounted');
+  }, [user?.id]);
+
   // Load messages on mount
   useEffect(() => {
     if (user?.id) {
+      log.info(TAG, 'Loading messages');
       loadMessages(user.id);
     }
   }, [user?.id, loadMessages]);
@@ -88,6 +97,7 @@ export default function CoachScreen() {
         timestamp: new Date(),
         synced: false,
       };
+      log.info(TAG, 'User sending message', { length: text.length, sessionId: sessionId || 'new' });
       addMessage(userMsg);
       setTyping(true);
       setQuickReplies([]);
@@ -121,7 +131,7 @@ export default function CoachScreen() {
           },
         );
       } catch (err) {
-        console.error('[CoachScreen] Send error:', err);
+        log.error(TAG, 'Send error', { error: String(err) });
         const errorMsg: ChatMessage = {
           id: `error-${Date.now()}`,
           role: 'system',

@@ -8,7 +8,10 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { log } from '@/lib/logger';
 import type { ChatMessage } from '@/types/chat';
+
+const TAG = 'OnboardingStore';
 
 const SESSION_KEY = 'onboarding_session_id';
 
@@ -31,36 +34,45 @@ export const useOnboardingStore = create<OnboardingState>((set) => ({
   isComplete: false,
   isSessionLoaded: false,
 
-  addMessage: (msg) =>
-    set((state) => ({ messages: [msg, ...state.messages] })),
+  addMessage: (msg) => {
+    log.debug(TAG, `addMessage: ${msg.role}`, { id: msg.id });
+    set((state) => ({ messages: [msg, ...state.messages] }));
+  },
 
   setSessionId: (id) => {
+    log.info(TAG, `setSessionId: ${id}`);
     set({ sessionId: id });
     AsyncStorage.setItem(SESSION_KEY, id).catch((err) =>
-      console.warn('[onboardingStore] Failed to persist sessionId:', err),
+      log.warn(TAG, 'Failed to persist sessionId', { error: String(err) }),
     );
   },
 
   markComplete: () => {
+    log.info(TAG, 'markComplete');
     set({ isComplete: true });
     AsyncStorage.removeItem(SESSION_KEY).catch((err) =>
-      console.warn('[onboardingStore] Failed to clear sessionId:', err),
+      log.warn(TAG, 'Failed to clear sessionId', { error: String(err) }),
     );
   },
 
   reset: () => {
+    log.info(TAG, 'reset');
     set({ messages: [], sessionId: null, isComplete: false, isSessionLoaded: false });
     AsyncStorage.removeItem(SESSION_KEY).catch((err) =>
-      console.warn('[onboardingStore] Failed to clear sessionId:', err),
+      log.warn(TAG, 'Failed to clear sessionId', { error: String(err) }),
     );
   },
 
   loadSession: async () => {
+    const endTimer = log.time(TAG, 'loadSession');
     try {
       const savedId = await AsyncStorage.getItem(SESSION_KEY);
+      endTimer();
+      log.info(TAG, 'Session loaded', { savedId });
       set({ sessionId: savedId, isSessionLoaded: true });
     } catch (err) {
-      console.warn('[onboardingStore] Failed to load sessionId:', err);
+      endTimer();
+      log.warn(TAG, 'Failed to load sessionId', { error: String(err) });
       set({ isSessionLoaded: true });
     }
   },

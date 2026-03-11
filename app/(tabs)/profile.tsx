@@ -9,6 +9,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert, Platform } from 'react-native';
 import { GradientHeader } from '@/components/ui/GradientHeader';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'ProfileScreen';
 import {
   Watch,
   Smartphone,
@@ -72,7 +75,13 @@ export default function ProfileScreen() {
   }, []);
 
   useEffect(() => {
+    log.info(TAG, 'Screen mounted', { email });
+    return () => log.info(TAG, 'Screen unmounted');
+  }, [email]);
+
+  useEffect(() => {
     if (user?.id) {
+      log.info(TAG, 'Fetching connected services + Garmin status');
       fetchConnectedServices(user.id);
       loadGarminStatus();
     }

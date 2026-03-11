@@ -5,7 +5,7 @@
  * Email + password sign-up with password strength indicator.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -22,6 +22,9 @@ import { useToast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'RegisterScreen';
 
 type PasswordStrength = 'weak' | 'ok' | 'strong';
 
@@ -82,8 +85,14 @@ export default function RegisterScreen() {
   const router = useRouter();
   const toast = useToast();
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+    return () => log.info(TAG, 'Screen unmounted');
+  }, []);
+
   const handleSignUp = useCallback(async () => {
     setError(null);
+    log.info(TAG, 'Sign-up attempt', { email: email.trim().toLowerCase() });
 
     if (!email.trim()) {
       setError('Bitte gib deine E-Mail-Adresse ein.');
@@ -98,10 +107,15 @@ export default function RegisterScreen() {
       return;
     }
 
+    const endTimer = log.time(TAG, 'signUp');
     const result = await signUp(email, password);
+    endTimer();
+
     if (!result.success) {
+      log.warn(TAG, 'Sign-up failed', { error: result.error });
       setError(result.error ?? 'Ein Fehler ist aufgetreten.');
     } else {
+      log.info(TAG, 'Sign-up successful');
       toast.show('success', 'Konto erstellt!');
       // Auth state change triggers auto-redirect via root layout guard
     }

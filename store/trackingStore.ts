@@ -8,6 +8,7 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { log } from '@/lib/logger';
 import type {
   SportOption,
   BodyPartOption,
@@ -15,6 +16,8 @@ import type {
   TrackedActivity,
   TrackingIntensity,
 } from '@/types/tracking';
+
+const TAG = 'TrackingStore';
 
 // Fallback options when DB returns nothing — generic, not sport-specific
 const FALLBACK_SPORTS: readonly SportOption[] = [
@@ -85,6 +88,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
 
   fetchSports: async (userId) => {
     set({ isLoading: true, error: null });
+    const endTimer = log.time(TAG, 'fetchSports');
     try {
       // Try profiles table first (JSONB sports array)
       const { data: profile, error: profileErr } = await supabase
@@ -103,7 +107,9 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
         (profile?.available_sports as unknown[]) ??
         [];
 
+      endTimer();
       if (rawSports.length > 0) {
+        log.info(TAG, `Found ${rawSports.length} sports from profile`);
         const parsed: SportOption[] = rawSports.map((s) => {
           if (typeof s === 'string') {
             return { name: s.toLowerCase(), label: s };
@@ -119,9 +125,11 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       }
 
       // Fallback: use generic defaults
+      log.info(TAG, 'Using fallback sports');
       set({ sports: FALLBACK_SPORTS, isLoading: false });
     } catch (err) {
-      console.error('[trackingStore] Failed to fetch sports:', err);
+      endTimer();
+      log.error(TAG, 'Failed to fetch sports', { error: String(err) });
       set({ sports: FALLBACK_SPORTS, isLoading: false, error: 'Sportarten konnten nicht geladen werden' });
     }
   },
@@ -217,6 +225,7 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       return false;
     }
 
+    log.info(TAG, 'Saving activity', { sport: selectedSport, duration: durationMinutes, intensity });
     set({ isSaving: true, error: null });
 
     try {
@@ -237,11 +246,12 @@ export const useTrackingStore = create<TrackingState>((set, get) => ({
       });
 
       if (error) {
-        console.error('[trackingStore] Error saving activity:', error.message);
+        log.error(TAG, 'Error saving activity', { message: error.message });
         set({ isSaving: false, error: 'Aktivitaet konnte nicht gespeichert werden' });
         return false;
       }
 
+      log.info(TAG, 'Activity saved successfully');
       // Reset form and refresh recent
       set({
         isSaving: false,

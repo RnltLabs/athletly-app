@@ -10,7 +10,10 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { log } from '@/lib/logger';
 import type { ChatMessage, Checkpoint } from '@/types/chat';
+
+const TAG = 'ChatStore';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://athletly.rnltlabs.de';
 
@@ -75,10 +78,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isConfirming: false,
   error: null,
 
-  addMessage: (msg) =>
-    set((state) => ({ messages: [msg, ...state.messages] })),
+  addMessage: (msg) => {
+    log.debug(TAG, `addMessage: ${msg.role}`, { id: msg.id, length: msg.content.length });
+    set((state) => ({ messages: [msg, ...state.messages] }));
+  },
 
-  setSessionId: (id) => set({ sessionId: id }),
+  setSessionId: (id) => {
+    log.info(TAG, `setSessionId: ${id}`);
+    set({ sessionId: id });
+  },
 
   setTyping: (value) => set({ isTyping: value }),
 
@@ -90,10 +98,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
+    log.info(TAG, 'Confirming checkpoint', { id: pendingCheckpoint.id, accepted });
     set({ isConfirming: true, error: null });
 
     try {
+      const endTimer = log.time(TAG, 'confirmCheckpoint');
       await callConfirmAPI(sessionId, pendingCheckpoint.id, accepted);
+      endTimer();
 
       const confirmMessage: ChatMessage = {
         id: `confirm-${Date.now()}`,
@@ -119,6 +130,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   loadMessages: async (userId) => {
     set({ error: null });
+    log.info(TAG, 'Loading messages', { userId: userId.slice(0, 8) });
+    const endTimer = log.time(TAG, 'loadMessages');
 
     try {
       const { data, error } = await supabase
@@ -132,7 +145,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         throw error;
       }
 
+      endTimer();
       if (data && data.length > 0) {
+        log.info(TAG, `Loaded ${data.length} messages`, { sessionId: data[0].session_id });
         const messages: ChatMessage[] = data.map((msg) => ({
           id: msg.id,
           role: (msg.role === 'model' ? 'assistant' : msg.role) as ChatMessage['role'],
@@ -146,6 +161,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           sessionId: data[0].session_id || null,
         });
       } else {
+        log.info(TAG, 'No messages found, showing welcome');
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
           role: 'assistant',

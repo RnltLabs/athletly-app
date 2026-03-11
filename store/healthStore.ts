@@ -7,7 +7,10 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { log } from '@/lib/logger';
 import type { HealthMetrics, HealthTrend, ConnectedService } from '@/types/health';
+
+const TAG = 'HealthStore';
 
 interface HealthState {
   metrics: HealthMetrics | null;
@@ -36,9 +39,11 @@ export const useHealthStore = create<HealthState>((set, get) => ({
 
   fetchMetrics: async (userId) => {
     set({ isLoading: true });
+    const endTimer = log.time(TAG, 'fetchMetrics');
 
     try {
       const today = getToday();
+      log.debug(TAG, 'Fetching metrics', { date: today });
 
       const { data, error } = await supabase
         .from('daily_metrics')
@@ -47,13 +52,15 @@ export const useHealthStore = create<HealthState>((set, get) => ({
         .eq('date', today)
         .maybeSingle();
 
+      endTimer();
       if (error) {
-        console.error('[healthStore] Error fetching metrics:', error.message);
+        log.error(TAG, 'Error fetching metrics', { message: error.message, code: error.code });
         set({ isLoading: false });
         return;
       }
 
       if (data) {
+        log.info(TAG, 'Metrics loaded', { recovery: data.recovery_score, sleep: data.sleep_hours });
         const metrics: HealthMetrics = {
           date: data.date,
           sleepHours: data.sleep_hours ?? undefined,
@@ -67,10 +74,12 @@ export const useHealthStore = create<HealthState>((set, get) => ({
         };
         set({ metrics, isLoading: false });
       } else {
+        log.info(TAG, 'No metrics for today');
         set({ metrics: null, isLoading: false });
       }
     } catch (err) {
-      console.error('[healthStore] Failed to fetch metrics:', err);
+      endTimer();
+      log.error(TAG, 'Failed to fetch metrics', { error: String(err) });
       set({ isLoading: false });
     }
   },

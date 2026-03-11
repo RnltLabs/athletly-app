@@ -5,7 +5,7 @@
  * Email + password sign-in with German UI labels.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'LoginScreen';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -30,21 +33,35 @@ export default function LoginScreen() {
   const { signIn, isLoading } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+    return () => log.info(TAG, 'Screen unmounted');
+  }, []);
+
   const handleSignIn = useCallback(async () => {
     setError(null);
+    log.info(TAG, 'Sign-in attempt', { email: email.trim().toLowerCase() });
 
     if (!email.trim()) {
+      log.warn(TAG, 'Validation failed: empty email');
       setError('Bitte gib deine E-Mail-Adresse ein.');
       return;
     }
     if (!password) {
+      log.warn(TAG, 'Validation failed: empty password');
       setError('Bitte gib dein Passwort ein.');
       return;
     }
 
+    const endTimer = log.time(TAG, 'signIn');
     const result = await signIn(email, password);
+    endTimer();
+
     if (!result.success) {
+      log.warn(TAG, 'Sign-in failed', { error: result.error });
       setError(result.error ?? 'Ein Fehler ist aufgetreten.');
+    } else {
+      log.info(TAG, 'Sign-in successful');
     }
     // On success, auth state change triggers auto-redirect via root layout guard
   }, [email, password, signIn]);

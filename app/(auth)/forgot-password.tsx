@@ -5,7 +5,7 @@
  * German UI labels, matches login screen design.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'ForgotPassword';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -30,21 +33,30 @@ export default function ForgotPasswordScreen() {
   const { resetPassword, isLoading } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+  }, []);
+
   const handleReset = useCallback(async () => {
     setError(null);
+    log.info(TAG, 'Password reset attempt', { email: email.trim().toLowerCase() });
 
     if (!email.trim()) {
       setError('Bitte gib deine E-Mail-Adresse ein.');
       return;
     }
 
+    const endTimer = log.time(TAG, 'resetPassword');
     const result = await resetPassword(email);
+    endTimer();
 
     if (!result.success) {
+      log.warn(TAG, 'Reset failed', { error: result.error });
       setError(result.error ?? 'Ein Fehler ist aufgetreten.');
       return;
     }
 
+    log.info(TAG, 'Reset email sent');
     setSent(true);
   }, [email, resetPassword]);
 

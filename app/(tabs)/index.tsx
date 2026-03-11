@@ -21,6 +21,9 @@ import { MetricMiniCard } from '@/components/home/MetricMiniCard';
 import { WeekProgress } from '@/components/home/WeekProgress';
 import { ProductBar } from '@/components/plan/ProductBar';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'TodayScreen';
 
 /**
  * Get a German greeting based on current hour.
@@ -78,9 +81,15 @@ export default function TodayScreen() {
 
   const isLoading = planLoading || healthLoading;
 
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted', { userId: user?.id?.slice(0, 8) });
+    return () => log.info(TAG, 'Screen unmounted');
+  }, [user?.id]);
+
   // Fetch data on mount
   useEffect(() => {
     if (user?.id) {
+      log.info(TAG, 'Fetching plan + metrics');
       fetchPlan(user.id);
       fetchMetrics(user.id);
     }
@@ -89,7 +98,10 @@ export default function TodayScreen() {
   // Pull-to-refresh
   const handleRefresh = useCallback(async () => {
     if (!user?.id) return;
+    log.info(TAG, 'Pull-to-refresh');
+    const endTimer = log.time(TAG, 'refresh');
     await Promise.all([fetchPlan(user.id), fetchMetrics(user.id)]);
+    endTimer();
   }, [user?.id, fetchPlan, fetchMetrics]);
 
   // Find today's session from the days array

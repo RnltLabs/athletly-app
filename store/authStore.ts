@@ -7,7 +7,10 @@
 
 import { create } from 'zustand';
 import { supabase } from '@/lib/supabase';
+import { log } from '@/lib/logger';
 import type { User, Session, Subscription } from '@supabase/supabase-js';
+
+const TAG = 'AuthStore';
 
 interface AuthState {
   user: User | null;
@@ -26,6 +29,7 @@ interface AuthState {
  * The profiles table has an `onboarding_complete` boolean column.
  */
 async function checkOnboardingStatus(userId: string): Promise<boolean> {
+  const endTimer = log.time(TAG, `checkOnboardingStatus(${userId.slice(0, 8)}...)`);
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -34,19 +38,24 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
       .limit(1)
       .maybeSingle();
 
+    endTimer();
+
     if (error) {
-      console.warn('[authStore] Error checking onboarding status:', error.message);
+      log.warn(TAG, 'Onboarding status query error', { message: error.message, code: error.code });
       return false;
     }
 
-    return data?.onboarding_complete === true;
+    const result = data?.onboarding_complete === true;
+    log.info(TAG, `Onboarding status: ${result}`, { data });
+    return result;
   } catch (err) {
-    console.warn('[authStore] Failed to check onboarding:', err);
+    endTimer();
+    log.error(TAG, 'Failed to check onboarding', { error: String(err) });
     return false;
   }
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   session: null,
   isOnboarded: false,
@@ -54,13 +63,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   isInitialized: false,
 
   initialize: () => {
+    log.info(TAG, '🚀 initialize() called');
     set({ isLoading: true });
 
     // Get initial session — clear stale tokens gracefully
+    const endGetSession = log.time(TAG, 'getSession');
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
+      endGetSession();
+
       if (error) {
-        console.warn('[authStore] Stale session, signing out:', error.message);
+        log.warn(TAG, 'Stale session, signing out', { message: error.message });
+        const endSignOut = log.time(TAG, 'signOut (stale)');
         await supabase.auth.signOut();
+        endSignOut();
         set({
           user: null,
           session: null,
@@ -68,10 +83,16 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
           isInitialized: true,
         });
+        log.info(TAG, '✅ Initialized (no session, stale cleared)');
         return;
       }
 
       if (session?.user) {
+        log.info(TAG, 'Session found', {
+          userId: session.user.id.slice(0, 8) + '...',
+          email: session.user.email,
+          expiresAt: session.expires_at,
+        });
         const onboarded = await checkOnboardingStatus(session.user.id);
         set({
           user: session.user,
@@ -80,7 +101,9 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
           isInitialized: true,
         });
+        log.info(TAG, '✅ Initialized (authenticated)', { onboarded });
       } else {
+        log.info(TAG, 'No session found');
         set({
           user: null,
           session: null,
@@ -88,12 +111,28 @@ export const useAuthStore = create<AuthState>((set) => ({
           isLoading: false,
           isInitialized: true,
         });
+        log.info(TAG, '✅ Initialized (unauthenticated)');
       }
+    }).catch((err) => {
+      log.error(TAG, '💥 getSession() threw an exception!', { error: String(err) });
+      set({
+        user: null,
+        session: null,
+        isOnboarded: false,
+        isLoading: false,
+        isInitialized: true,
+      });
     });
 
     // Listen for auth changes
+    log.debug(TAG, 'Setting up onAuthStateChange listener');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
+        log.info(TAG, `Auth state changed: ${event}`, {
+          hasSession: !!session,
+          userId: session?.user?.id?.slice(0, 8),
+        });
+
         if (session?.user) {
           const onboarded = await checkOnboardingStatus(session.user.id);
           set({
@@ -102,6 +141,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             isOnboarded: onboarded,
             isLoading: false,
           });
+          log.info(TAG, 'State updated after auth change', { event, onboarded });
         } else {
           set({
             user: null,
@@ -109,6 +149,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             isOnboarded: false,
             isLoading: false,
           });
+          log.info(TAG, 'State cleared after auth change', { event });
         }
       }
     );
@@ -116,13 +157,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     return subscription;
   },
 
-  setOnboarded: (value) => set({ isOnboarded: value }),
+  setOnboarded: (value) => {
+    log.info(TAG, `setOnboarded: ${value}`);
+    set({ isOnboarded: value });
+  },
 
-  reset: () =>
+  reset: () => {
+    log.info(TAG, 'reset() called');
     set({
       user: null,
       session: null,
       isOnboarded: false,
       isLoading: false,
-    }),
+    });
+  },
 }));

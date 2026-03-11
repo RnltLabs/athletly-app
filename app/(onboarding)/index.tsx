@@ -33,8 +33,11 @@ import { useAuthStore } from '@/store/authStore';
 import { useChatStream } from '@/hooks/useChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
 import { apiGet } from '@/lib/api';
 import type { ChatMessage, StreamMessage, StreamProgress } from '@/types/chat';
+
+const TAG = 'OnboardingScreen';
 
 /**
  * Approximate onboarding progress based on message count.
@@ -180,6 +183,10 @@ function getQuickReplies(
 }
 
 export default function OnboardingScreen() {
+  useEffect(() => {
+    log.info(TAG, 'Screen mounted');
+    return () => log.info(TAG, 'Screen unmounted');
+  }, []);
   const {
     messages,
     sessionId,
@@ -238,15 +245,20 @@ export default function OnboardingScreen() {
   useEffect(() => {
     if (!isSessionLoaded) return;
     if (hasSentInitialRef.current) return;
-    if (sessionId) return; // resuming existing session
+    if (sessionId) {
+      log.info(TAG, 'Resuming existing session', { sessionId });
+      return;
+    }
     if (messages.length > 0) return;
 
+    log.info(TAG, 'Auto-sending initial "Hallo"');
     hasSentInitialRef.current = true;
     sendUserMessage('Hallo');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSessionLoaded, sessionId, messages.length]);
 
   const handleOnboardingComplete = useCallback(() => {
+    log.info(TAG, '🎉 Onboarding complete!');
     markComplete();
     setOnboarded(true);
     // Auth guard in root layout handles redirect to (tabs)
@@ -275,6 +287,8 @@ export default function OnboardingScreen() {
       const trimmed = text.trim();
       if (!trimmed) return;
       if (isStreaming) return;
+
+      log.info(TAG, 'User message', { length: trimmed.length, messageCount: messages.length });
 
       // Add user message to store
       const userMessage: ChatMessage = {
