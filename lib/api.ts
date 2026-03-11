@@ -73,6 +73,27 @@ export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
   }
 }
 
+export async function apiPostPublic<T>(path: string, body?: unknown): Promise<T> {
+  const endTimer = log.time(TAG, `POST (public) ${path}`);
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    endTimer();
+    await logResponse('POST', path, response);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    return response.json();
+  } catch (err) {
+    endTimer();
+    log.error(TAG, `POST (public) ${path} failed`, { error: String(err) });
+    throw err;
+  }
+}
+
 export async function apiDelete<T>(path: string): Promise<T> {
   const endTimer = log.time(TAG, `DELETE ${path}`);
   try {

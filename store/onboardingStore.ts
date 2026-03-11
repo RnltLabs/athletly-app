@@ -1,79 +1,122 @@
 /**
  * Onboarding Store — Athletly V2
  *
- * Zustand store for chat-based onboarding flow.
- * Only sessionId is persisted via AsyncStorage.
- * Messages come from the backend on resume.
+ * Zustand store for the companion-style onboarding flow.
+ * No persistence — data lives in memory only during onboarding.
+ * Garmin credentials are never written to AsyncStorage.
+ * Call reset() after account creation to clear all state.
  */
 
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { log } from '@/lib/logger';
-import type { ChatMessage } from '@/types/chat';
 
 const TAG = 'OnboardingStore';
 
-const SESSION_KEY = 'onboarding_session_id';
+export type DayOfWeek = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export type WearableType = 'garmin' | 'apple_health' | 'health_connect';
 
 interface OnboardingState {
-  messages: ChatMessage[];
-  sessionId: string | null;
-  isComplete: boolean;
-  isSessionLoaded: boolean;
+  // Step data
+  sports: string[];
+  customSport: string | null;
+  goals: string[];
+  customGoal: string | null;
+  availableDays: DayOfWeek[];
+  wearable: WearableType | null;
+  garminCredentials: { email: string; password: string } | null;
 
-  addMessage: (msg: ChatMessage) => void;
-  setSessionId: (id: string) => void;
-  markComplete: () => void;
+  // Navigation
+  currentStep: number;
+
+  // Actions (immutable updates)
+  toggleSport: (sport: string) => void;
+  setCustomSport: (text: string | null) => void;
+  toggleGoal: (goal: string) => void;
+  setCustomGoal: (text: string | null) => void;
+  toggleDay: (day: DayOfWeek) => void;
+  setWearable: (type: WearableType | null) => void;
+  setGarminCredentials: (creds: { email: string; password: string } | null) => void;
+  setStep: (step: number) => void;
   reset: () => void;
-  loadSession: () => Promise<void>;
 }
 
+const INITIAL_STATE = {
+  sports: [],
+  customSport: null,
+  goals: [],
+  customGoal: null,
+  availableDays: [],
+  wearable: null,
+  garminCredentials: null,
+  currentStep: 0,
+} as const;
+
 export const useOnboardingStore = create<OnboardingState>((set) => ({
-  messages: [],
-  sessionId: null,
-  isComplete: false,
-  isSessionLoaded: false,
+  ...INITIAL_STATE,
 
-  addMessage: (msg) => {
-    log.debug(TAG, `addMessage: ${msg.role}`, { id: msg.id });
-    set((state) => ({ messages: [msg, ...state.messages] }));
+  toggleSport: (sport) => {
+    log.debug(TAG, `toggleSport: ${sport}`);
+    set((state) => {
+      const exists = state.sports.includes(sport);
+      return {
+        sports: exists
+          ? state.sports.filter((s) => s !== sport)
+          : [...state.sports, sport],
+      };
+    });
   },
 
-  setSessionId: (id) => {
-    log.info(TAG, `setSessionId: ${id}`);
-    set({ sessionId: id });
-    AsyncStorage.setItem(SESSION_KEY, id).catch((err) =>
-      log.warn(TAG, 'Failed to persist sessionId', { error: String(err) }),
-    );
+  setCustomSport: (text) => {
+    log.debug(TAG, 'setCustomSport', { text });
+    set({ customSport: text });
   },
 
-  markComplete: () => {
-    log.info(TAG, 'markComplete');
-    set({ isComplete: true });
-    AsyncStorage.removeItem(SESSION_KEY).catch((err) =>
-      log.warn(TAG, 'Failed to clear sessionId', { error: String(err) }),
-    );
+  toggleGoal: (goal) => {
+    log.debug(TAG, `toggleGoal: ${goal}`);
+    set((state) => {
+      const exists = state.goals.includes(goal);
+      return {
+        goals: exists
+          ? state.goals.filter((g) => g !== goal)
+          : [...state.goals, goal],
+      };
+    });
+  },
+
+  setCustomGoal: (text) => {
+    log.debug(TAG, 'setCustomGoal', { text });
+    set({ customGoal: text });
+  },
+
+  toggleDay: (day) => {
+    log.debug(TAG, `toggleDay: ${day}`);
+    set((state) => {
+      const exists = state.availableDays.includes(day);
+      return {
+        availableDays: exists
+          ? state.availableDays.filter((d) => d !== day)
+          : [...state.availableDays, day],
+      };
+    });
+  },
+
+  setWearable: (type) => {
+    log.debug(TAG, 'setWearable', { type });
+    set({ wearable: type });
+  },
+
+  setGarminCredentials: (creds) => {
+    log.debug(TAG, 'setGarminCredentials', { hasCredentials: creds !== null });
+    set({ garminCredentials: creds });
+  },
+
+  setStep: (step) => {
+    log.debug(TAG, `setStep: ${step}`);
+    set({ currentStep: step });
   },
 
   reset: () => {
     log.info(TAG, 'reset');
-    set({ messages: [], sessionId: null, isComplete: false, isSessionLoaded: false });
-    AsyncStorage.removeItem(SESSION_KEY).catch((err) =>
-      log.warn(TAG, 'Failed to clear sessionId', { error: String(err) }),
-    );
-  },
-
-  loadSession: async () => {
-    const endTimer = log.time(TAG, 'loadSession');
-    try {
-      const savedId = await AsyncStorage.getItem(SESSION_KEY);
-      endTimer();
-      log.info(TAG, 'Session loaded', { savedId });
-      set({ sessionId: savedId, isSessionLoaded: true });
-    } catch (err) {
-      endTimer();
-      log.warn(TAG, 'Failed to load sessionId', { error: String(err) });
-      set({ isSessionLoaded: true });
-    }
+    set({ ...INITIAL_STATE });
   },
 }));

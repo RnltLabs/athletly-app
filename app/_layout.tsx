@@ -50,16 +50,14 @@ function useAuthGuard() {
     });
 
     if (!session) {
-      if (!inAuthGroup) {
-        log.info(TAG, 'AuthGuard → redirect to /(auth)/login');
-        router.replace('/(auth)/login');
-      }
-    } else if (!isOnboarded) {
+      // Not logged in → welcome screen handles the fork (new flow / existing account)
       if (!inOnboardingGroup) {
         log.info(TAG, 'AuthGuard → redirect to /(onboarding)');
         router.replace('/(onboarding)');
       }
     } else {
+      // Logged in → go to tabs regardless of onboarding status
+      // (agent re-triggers plan creation in background if needed)
       if (inAuthGroup || inOnboardingGroup) {
         log.info(TAG, 'AuthGuard → redirect to /(tabs)');
         router.replace('/(tabs)');
