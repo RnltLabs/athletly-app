@@ -23,6 +23,7 @@ import {
   LogOut,
   Trash2,
 } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useHealthStore } from '@/store/healthStore';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,6 +48,7 @@ export default function ProfileScreen() {
   const connectedServices = useHealthStore((s) => s.connectedServices);
   const fetchConnectedServices = useHealthStore((s) => s.fetchConnectedServices);
   const { signOut } = useAuth();
+  const router = useRouter();
 
   const [garminStatus, setGarminStatus] = useState<GarminStatus>({ connected: false });
   const [garminLoading, setGarminLoading] = useState(false);
@@ -143,6 +145,16 @@ export default function ProfileScreen() {
       fetchConnectedServices(user.id);
     }
   }, [user?.id, fetchConnectedServices, loadGarminStatus]);
+
+  /**
+   * Navigate to the service detail screen for a given provider.
+   */
+  const navigateToServiceDetail = useCallback(
+    (provider: string) => {
+      router.push({ pathname: '/service-detail', params: { provider } });
+    },
+    [router],
+  );
 
   /**
    * Connect Apple Health — request permissions and initial sync.
@@ -279,6 +291,7 @@ export default function ProfileScreen() {
             onConnect={() => setShowGarminModal(true)}
             onSync={handleGarminSync}
             onDisconnect={handleGarminDisconnect}
+            onPress={() => navigateToServiceDetail('garmin')}
             isLoading={garminLoading}
           />
           <View className="h-px ml-14" style={{ backgroundColor: Colors.divider }} />
@@ -291,6 +304,7 @@ export default function ProfileScreen() {
               onConnect={handleAppleHealthConnect}
               onSync={handleAppleHealthSync}
               onDisconnect={handleAppleHealthDisconnect}
+              onPress={() => navigateToServiceDetail('apple_health')}
               isLoading={appleHealth.syncing}
             />
           ) : Platform.OS !== 'android' ? (
@@ -319,6 +333,7 @@ export default function ProfileScreen() {
                   onConnect={handleHealthConnectConnect}
                   onSync={handleHealthConnectSync}
                   onDisconnect={handleHealthConnectDisconnect}
+                  onPress={() => navigateToServiceDetail('health_connect')}
                   isLoading={healthConnect.isSyncing}
                 />
               ) : (

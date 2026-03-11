@@ -2,7 +2,7 @@
  * Health Store — Athletly V2
  *
  * Zustand store for health metrics, trends, and connected services.
- * Fetches from Supabase daily_metrics and provider_tokens tables.
+ * Fetches from Supabase health_daily_metrics and provider_tokens tables.
  */
 
 import { create } from 'zustand';
@@ -46,7 +46,7 @@ export const useHealthStore = create<HealthState>((set, get) => ({
       log.debug(TAG, 'Fetching metrics', { date: today });
 
       const { data, error } = await supabase
-        .from('daily_metrics')
+        .from('health_daily_metrics')
         .select('*')
         .eq('user_id', userId)
         .eq('date', today)
@@ -60,17 +60,20 @@ export const useHealthStore = create<HealthState>((set, get) => ({
       }
 
       if (data) {
-        log.info(TAG, 'Metrics loaded', { recovery: data.recovery_score, sleep: data.sleep_hours });
+        log.info(TAG, 'Metrics loaded', { recovery: data.recovery_score, sleep: data.sleep_duration_minutes });
         const metrics: HealthMetrics = {
           date: data.date,
-          sleepHours: data.sleep_hours ?? undefined,
+          sleepDurationMinutes: data.sleep_duration_minutes ?? undefined,
           sleepScore: data.sleep_score ?? undefined,
-          restingHr: data.resting_hr ?? undefined,
-          hrv: data.hrv ?? undefined,
+          restingHeartRate: data.resting_heart_rate ?? undefined,
+          hrvAvg: data.hrv_avg ?? undefined,
           steps: data.steps ?? undefined,
           activeCalories: data.active_calories ?? undefined,
+          totalCalories: data.total_calories ?? undefined,
           recoveryScore: data.recovery_score ?? undefined,
-          trainingLoad: data.training_load ?? undefined,
+          stressAvg: data.stress_avg ?? undefined,
+          bodyBatteryHigh: data.body_battery_high ?? undefined,
+          bodyBatteryLow: data.body_battery_low ?? undefined,
         };
         set({ metrics, isLoading: false });
       } else {

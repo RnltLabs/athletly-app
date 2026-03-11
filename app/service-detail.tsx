@@ -1,0 +1,568 @@
+/**
+ * Service Detail Screen — Athletly V2
+ *
+ * Shows synced data for a connected service (Garmin, Apple Health, Health Connect).
+ * Accessible by tapping a service card in the profile screen.
+ * German text throughout.
+ */
+
+import React, { useEffect, useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  ActivityIndicator,
+  Pressable,
+  Platform,
+} from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, Moon, Heart, Activity, Zap, Footprints, Flame, BarChart3, Database } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/authStore';
+import { Card, Skeleton, EmptyState } from '@/components/ui';
+import { Colors } from '@/lib/colors';
+import { log } from '@/lib/logger';
+
+const TAG = 'ServiceDetail';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface DailyMetric {
+  date: string;
+  sleep_duration_minutes: number | null;
+  sleep_score: number | null;
+  hrv_avg: number | null;
+  resting_heart_rate: number | null;
+  stress_avg: number | null;
+  body_battery_high: number | null;
+  body_battery_low: number | null;
+  steps: number | null;
+  active_calories: number | null;
+  total_calories: number | null;
+  recovery_score: number | null;
+}
+
+interface ActivityRow {
+  id: string;
+  sport: string;
+  start_time: string;
+  duration_seconds: number | null;
+  source: string | null;
+  raw_data: Record<string, unknown> | null;
+}
+
+interface HealthDataGroup {
+  data_type: string;
+  count: number;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const SERVICE_LABELS: Record<string, string> = {
+  garmin: 'Garmin Connect',
+  apple_health: 'Apple Health',
+  health_connect: 'Health Connect',
+};
+
+/**
+ * Map a provider key to the source value used in the activities table.
+ * Garmin activities are stored with source = 'garmin',
+ * Apple Health as 'apple_health', Health Connect as 'health_connect'.
+ */
+function getSourceFilter(provider: string): string {
+  return provider;
+}
+
+/**
+ * Format an ISO date string to a short German date label.
+ * Example: "11. Mär 2026"
+ */
+function formatDateDE(iso: string): string {
+  const date = new Date(iso);
+  const months = [
+    'Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez',
+  ];
+  const day = date.getDate();
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return `${day}. ${month} ${year}`;
+}
+
+/**
+ * Format minutes into a readable German string.
+ */
+function formatMinutes(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} Min.`;
+  if (m === 0) return `${h} Std.`;
+  return `${h} Std. ${m} Min.`;
+}
+
+/**
+ * Format seconds into a readable German string.
+ */
+function formatSeconds(seconds: number): string {
+  return formatMinutes(Math.round(seconds / 60));
+}
+
+/**
+ * Get a date N days ago as YYYY-MM-DD.
+ */
+function daysAgo(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+// ---------------------------------------------------------------------------
+// Data fetching hooks
+// ---------------------------------------------------------------------------
+
+function useDailyMetrics(userId: string | undefined, provider: string) {
+  const [data, setData] = useState<DailyMetric[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const since = daysAgo(14);
+      const source = getSourceFilter(provider);
+      log.debug(TAG, 'Fetching daily metrics', { source, since });
+
+      const { data: rows, error } = await supabase
+        .from('health_daily_metrics')
+        .select(
+          'date, sleep_duration_minutes, sleep_score, hrv_avg, resting_heart_rate, stress_avg, body_battery_high, body_battery_low, steps, active_calories, total_calories, recovery_score',
+        )
+        .eq('user_id', userId)
+        .eq('source', source)
+        .gte('date', since)
+        .order('date', { ascending: false });
+
+      if (error) {
+        log.error(TAG, 'Error fetching daily metrics', { message: error.message });
+      } else {
+        setData(rows ?? []);
+      }
+    } catch (err) {
+      log.error(TAG, 'Failed to fetch daily metrics', { error: String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, provider]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, loading };
+}
+
+function useActivities(userId: string | undefined, provider: string) {
+  const [data, setData] = useState<ActivityRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetch = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const since = daysAgo(30);
+      const source = getSourceFilter(provider);
+      log.debug(TAG, 'Fetching activities', { source, since });
+
+      const { data: rows, error } = await supabase
+        .from('activities')
+        .select('id, sport, start_time, duration_seconds, source, raw_data')
+        .eq('user_id', userId)
+        .eq('source', source)
+        .gte('start_time', new Date(since).toISOString())
+        .order('start_time', { ascending: false })
+        .limit(50);
+
+      if (error) {
+        log.error(TAG, 'Error fetching activities', { message: error.message });
+      } else {
+        setData(rows ?? []);
+      }
+    } catch (err) {
+      log.error(TAG, 'Failed to fetch activities', { error: String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, provider]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, loading };
+}
+
+function useHealthDataGroups(userId: string | undefined, provider: string) {
+  const [data, setData] = useState<HealthDataGroup[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isRawProvider = provider === 'apple_health' || provider === 'health_connect';
+
+  const fetch = useCallback(async () => {
+    if (!userId || !isRawProvider) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const since = daysAgo(7);
+      log.debug(TAG, 'Fetching health data groups', { provider, since });
+
+      // Supabase doesn't support GROUP BY directly, so we fetch data_type and count client-side
+      const { data: rows, error } = await supabase
+        .from('health_data')
+        .select('data_type')
+        .eq('user_id', userId)
+        .eq('provider', provider)
+        .gte('recorded_at', new Date(since).toISOString());
+
+      if (error) {
+        log.error(TAG, 'Error fetching health data', { message: error.message });
+      } else {
+        const counts: Record<string, number> = {};
+        for (const row of rows ?? []) {
+          counts[row.data_type] = (counts[row.data_type] ?? 0) + 1;
+        }
+        const groups = Object.entries(counts)
+          .map(([data_type, count]) => ({ data_type, count }))
+          .sort((a, b) => b.count - a.count);
+        setData(groups);
+      }
+    } catch (err) {
+      log.error(TAG, 'Failed to fetch health data groups', { error: String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, provider, isRawProvider]);
+
+  useEffect(() => {
+    fetch();
+  }, [fetch]);
+
+  return { data, loading, isRawProvider };
+}
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <Text
+      className="text-xs uppercase tracking-wider mb-2 mt-6 ml-1"
+      style={{ color: Colors.textSecondary }}
+    >
+      {title}
+    </Text>
+  );
+}
+
+function MetricCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <View
+      className="rounded-[14px] p-3 flex-1 min-w-[45%]"
+      style={{ backgroundColor: Colors.surfaceNested }}
+    >
+      <Text className="text-xs font-medium" style={{ color: Colors.textSecondary }}>
+        {label}
+      </Text>
+      <Text className="text-lg font-bold mt-1" style={{ color: Colors.textPrimary }}>
+        {value}
+      </Text>
+      {sub ? (
+        <Text className="text-[11px] mt-0.5" style={{ color: Colors.textMuted }}>
+          {sub}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function DailyMetricsSection({ metrics }: { metrics: DailyMetric[] }) {
+  if (metrics.length === 0) {
+    return (
+      <Card>
+        <Text className="text-sm text-center py-4" style={{ color: Colors.textMuted }}>
+          Keine Metriken in den letzten 14 Tagen
+        </Text>
+      </Card>
+    );
+  }
+
+  // Show the most recent day's data prominently, then a compact list
+  const latest = metrics[0];
+
+  const cards: { label: string; value: string; sub: string }[] = [];
+
+  if (latest.sleep_duration_minutes != null) {
+    cards.push({
+      label: 'Schlaf',
+      value: formatMinutes(latest.sleep_duration_minutes),
+      sub: latest.sleep_score != null ? `Score: ${latest.sleep_score}` : formatDateDE(latest.date),
+    });
+  }
+  if (latest.hrv_avg != null) {
+    cards.push({ label: 'HRV', value: `${latest.hrv_avg} ms`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.resting_heart_rate != null) {
+    cards.push({ label: 'Ruhe-HF', value: `${latest.resting_heart_rate} bpm`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.stress_avg != null) {
+    cards.push({ label: 'Stress', value: `${latest.stress_avg}`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.body_battery_high != null) {
+    const low = latest.body_battery_low ?? '–';
+    cards.push({ label: 'Body Battery', value: `${latest.body_battery_high}`, sub: `Tief: ${low}` });
+  }
+  if (latest.steps != null) {
+    cards.push({ label: 'Schritte', value: latest.steps.toLocaleString('de-DE'), sub: formatDateDE(latest.date) });
+  }
+  if (latest.active_calories != null) {
+    cards.push({ label: 'Kalorien (aktiv)', value: `${latest.active_calories} kcal`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.recovery_score != null) {
+    cards.push({ label: 'Erholung', value: `${latest.recovery_score}%`, sub: formatDateDE(latest.date) });
+  }
+
+  return (
+    <Card>
+      <Text className="text-sm font-semibold mb-3" style={{ color: Colors.textPrimary }}>
+        Aktuell — {formatDateDE(latest.date)}
+      </Text>
+      <View className="flex-row flex-wrap gap-2">
+        {cards.map((c) => (
+          <MetricCard key={c.label} label={c.label} value={c.value} sub={c.sub} />
+        ))}
+      </View>
+
+      {metrics.length > 1 && (
+        <View className="mt-4 pt-3" style={{ borderTopWidth: 1, borderTopColor: Colors.divider }}>
+          <Text className="text-xs font-medium mb-2" style={{ color: Colors.textSecondary }}>
+            Letzte {metrics.length} Tage
+          </Text>
+          {metrics.slice(1).map((m) => (
+            <View key={m.date} className="flex-row justify-between py-1.5">
+              <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                {formatDateDE(m.date)}
+              </Text>
+              <View className="flex-row gap-3">
+                {m.steps != null && (
+                  <Text className="text-xs" style={{ color: Colors.textPrimary }}>
+                    {m.steps.toLocaleString('de-DE')} Schr.
+                  </Text>
+                )}
+                {m.resting_heart_rate != null && (
+                  <Text className="text-xs" style={{ color: Colors.textPrimary }}>
+                    {m.resting_heart_rate} bpm
+                  </Text>
+                )}
+                {m.sleep_duration_minutes != null && (
+                  <Text className="text-xs" style={{ color: Colors.textPrimary }}>
+                    {formatMinutes(m.sleep_duration_minutes)}
+                  </Text>
+                )}
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
+    </Card>
+  );
+}
+
+function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
+  if (activities.length === 0) {
+    return (
+      <Card>
+        <Text className="text-sm text-center py-4" style={{ color: Colors.textMuted }}>
+          Keine Aktivitaeten in den letzten 30 Tagen
+        </Text>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      {activities.map((a, idx) => {
+        const rawData = a.raw_data ?? {};
+        const distance = rawData.distance_km as number | undefined;
+        const avgHr = rawData.avg_heart_rate as number | undefined;
+        const isLast = idx === activities.length - 1;
+
+        return (
+          <View
+            key={a.id}
+            className="py-3"
+            style={!isLast ? { borderBottomWidth: 1, borderBottomColor: Colors.divider } : undefined}
+          >
+            <View className="flex-row justify-between items-center">
+              <Text className="text-sm font-semibold" style={{ color: Colors.textPrimary }}>
+                {a.sport}
+              </Text>
+              <Text className="text-xs" style={{ color: Colors.textMuted }}>
+                {formatDateDE(a.start_time)}
+              </Text>
+            </View>
+            <View className="flex-row gap-4 mt-1">
+              {a.duration_seconds != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  {formatSeconds(a.duration_seconds)}
+                </Text>
+              )}
+              {distance != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  {distance.toFixed(1)} km
+                </Text>
+              )}
+              {avgHr != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  {avgHr} bpm
+                </Text>
+              )}
+            </View>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
+function RawDataSection({ groups }: { groups: HealthDataGroup[] }) {
+  if (groups.length === 0) {
+    return (
+      <Card>
+        <Text className="text-sm text-center py-4" style={{ color: Colors.textMuted }}>
+          Keine Rohdaten in den letzten 7 Tagen
+        </Text>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      {groups.map((g, idx) => {
+        const isLast = idx === groups.length - 1;
+        return (
+          <View
+            key={g.data_type}
+            className="flex-row justify-between py-2.5"
+            style={!isLast ? { borderBottomWidth: 1, borderBottomColor: Colors.divider } : undefined}
+          >
+            <Text className="text-sm" style={{ color: Colors.textPrimary }}>
+              {g.data_type}
+            </Text>
+            <Text className="text-sm font-medium" style={{ color: Colors.textSecondary }}>
+              {g.count} Eintraege
+            </Text>
+          </View>
+        );
+      })}
+    </Card>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <View className="gap-3 mt-4">
+      <Skeleton width="100%" height={120} borderRadius={16} />
+      <Skeleton width="100%" height={80} borderRadius={16} />
+      <Skeleton width="100%" height={80} borderRadius={16} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main Screen
+// ---------------------------------------------------------------------------
+
+export default function ServiceDetailScreen() {
+  const { provider } = useLocalSearchParams<{ provider: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const userId = useAuthStore((s) => s.user?.id);
+
+  const serviceLabel = SERVICE_LABELS[provider ?? ''] ?? provider ?? 'Dienst';
+
+  const metrics = useDailyMetrics(userId, provider ?? '');
+  const activities = useActivities(userId, provider ?? '');
+  const healthData = useHealthDataGroups(userId, provider ?? '');
+
+  const isLoading = metrics.loading || activities.loading || healthData.loading;
+
+  return (
+    <View className="flex-1" style={{ backgroundColor: Colors.background }}>
+      {/* Header */}
+      <LinearGradient
+        colors={[Colors.gradientStart, Colors.gradientMid, Colors.gradientEnd]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{ paddingTop: insets.top }}
+      >
+        <View className="px-4 pt-3 pb-5">
+          <View className="flex-row items-center">
+            <Pressable
+              onPress={() => router.back()}
+              className="mr-3 rounded-full p-1"
+              hitSlop={12}
+              accessibilityRole="button"
+              accessibilityLabel="Zurueck"
+            >
+              <ArrowLeft size={22} color="#FFFFFF" />
+            </Pressable>
+            <View className="flex-1">
+              <Text
+                className="text-white text-xl font-bold"
+                style={{ letterSpacing: -0.3 }}
+              >
+                {serviceLabel}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-4 pb-8"
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <LoadingSkeleton />
+        ) : (
+          <>
+            {/* Taegliche Metriken */}
+            <SectionTitle title="Taegliche Metriken" />
+            <DailyMetricsSection metrics={metrics.data} />
+
+            {/* Aktivitaeten */}
+            <SectionTitle title="Aktivitaeten" />
+            <ActivitiesSection activities={activities.data} />
+
+            {/* Rohdaten — nur Apple Health / Health Connect */}
+            {healthData.isRawProvider && (
+              <>
+                <SectionTitle title="Rohdaten (7 Tage)" />
+                <RawDataSection groups={healthData.data} />
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}

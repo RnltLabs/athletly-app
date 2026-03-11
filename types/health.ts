@@ -6,14 +6,17 @@
 
 export interface HealthMetrics {
   date: string;
-  sleepHours?: number;
+  sleepDurationMinutes?: number;
   sleepScore?: number;
-  restingHr?: number;
-  hrv?: number;
+  restingHeartRate?: number;
+  hrvAvg?: number;
   steps?: number;
   activeCalories?: number;
+  totalCalories?: number;
   recoveryScore?: number;      // 0-100
-  trainingLoad?: number;
+  stressAvg?: number;
+  bodyBatteryHigh?: number;
+  bodyBatteryLow?: number;
 }
 
 export interface HealthTrend {

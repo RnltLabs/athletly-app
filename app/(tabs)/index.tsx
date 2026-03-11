@@ -58,8 +58,9 @@ function getTodayISO(): string {
   return new Date().toISOString().split('T')[0];
 }
 
-function formatSleepHours(hours: number | undefined): string {
-  if (hours === undefined) return '--';
+function formatSleepMinutes(minutes: number | undefined): string {
+  if (minutes === undefined) return '--';
+  const hours = minutes / 60;
   return `${hours.toFixed(1)}h`;
 }
 
@@ -68,9 +69,9 @@ function formatHRV(hrv: number | undefined): string {
   return `${Math.round(hrv)}ms`;
 }
 
-function formatTrainingLoad(load: number | undefined): string {
-  if (load === undefined) return '--';
-  return load.toLocaleString('de-DE');
+function formatStress(stress: number | undefined): string {
+  if (stress === undefined) return '--';
+  return `${Math.round(stress)}`;
 }
 
 export default function TodayScreen() {
@@ -172,18 +173,18 @@ export default function TodayScreen() {
             <View className="flex-row gap-3 px-4 mt-4">
               <MetricMiniCard
                 icon={Moon}
-                value={formatSleepHours(metrics?.sleepHours)}
+                value={formatSleepMinutes(metrics?.sleepDurationMinutes)}
                 label="Schlaf"
               />
               <MetricMiniCard
                 icon={Heart}
-                value={formatHRV(metrics?.hrv)}
+                value={formatHRV(metrics?.hrvAvg)}
                 label="HRV"
               />
               <MetricMiniCard
                 icon={Activity}
-                value={formatTrainingLoad(metrics?.trainingLoad)}
-                label="Belastung"
+                value={formatStress(metrics?.stressAvg)}
+                label="Stress"
               />
             </View>
 

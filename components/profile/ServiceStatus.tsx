@@ -6,8 +6,8 @@
  */
 
 import React from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
-import { RefreshCw, X } from 'lucide-react-native';
+import { View, Text, ActivityIndicator, Pressable } from 'react-native';
+import { RefreshCw, X, ChevronRight } from 'lucide-react-native';
 import { Badge } from '@/components/ui';
 import { Button } from '@/components/ui';
 import { Colors } from '@/lib/colors';
@@ -20,6 +20,7 @@ interface ServiceStatusProps {
   onConnect?: () => void;
   onSync?: () => void;
   onDisconnect?: () => void;
+  onPress?: () => void;
   isLoading?: boolean;
 }
 
@@ -50,9 +51,10 @@ export function ServiceStatus({
   onConnect,
   onSync,
   onDisconnect,
+  onPress,
   isLoading = false,
 }: ServiceStatusProps) {
-  return (
+  const content = (
     <View className="flex-row items-center py-3.5 px-4">
       <View className="w-8 items-center mr-3">
         <Icon size={20} color={Colors.textSecondary} />
@@ -88,6 +90,9 @@ export function ServiceStatus({
           {onDisconnect && (
             <Button variant="icon" size="sm" icon={X} onPress={onDisconnect} />
           )}
+          {onPress && (
+            <ChevronRight size={16} color={Colors.textMuted} />
+          )}
         </View>
       ) : (
         onConnect && (
@@ -96,6 +101,21 @@ export function ServiceStatus({
       )}
     </View>
   );
+
+  if (onPress && isConnected) {
+    return (
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+        accessibilityRole="button"
+        accessibilityLabel={`${name} Details anzeigen`}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return content;
 }
 
 export default ServiceStatus;
