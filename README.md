@@ -91,8 +91,9 @@ cp .env.example .env   # fill in SUPABASE_URL, SUPABASE_ANON_KEY, API_URL
 ```bash
 # Development
 npx expo start                  # Expo dev server
-npx expo run:ios                # iOS native build
-npx expo run:android            # Android native build
+npx expo run:ios                # iOS simulator
+npx expo run:ios --device       # iOS physical device
+npx expo run:android            # Android
 npx expo start --web            # Web
 ```
 
