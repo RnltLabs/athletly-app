@@ -35,6 +35,10 @@ interface DailyMetric {
   date: string;
   sleep_duration_minutes: number | null;
   sleep_score: number | null;
+  sleep_deep_minutes: number | null;
+  sleep_light_minutes: number | null;
+  sleep_rem_minutes: number | null;
+  sleep_awake_minutes: number | null;
   hrv_avg: number | null;
   resting_heart_rate: number | null;
   stress_avg: number | null;
@@ -44,6 +48,11 @@ interface DailyMetric {
   active_calories: number | null;
   total_calories: number | null;
   recovery_score: number | null;
+  vo2max: number | null;
+  spo2_avg: number | null;
+  respiration_avg: number | null;
+  intensity_minutes: number | null;
+  floors_climbed: number | null;
 }
 
 interface ActivityRow {
@@ -51,8 +60,15 @@ interface ActivityRow {
   sport: string;
   start_time: string;
   duration_seconds: number | null;
+  distance_meters: number | null;
+  avg_hr: number | null;
+  max_hr: number | null;
+  calories: number | null;
+  training_effect: number | null;
+  vo2max_activity: number | null;
+  avg_pace_min_km: number | null;
+  elevation_gain_m: number | null;
   source: string | null;
-  raw_data: Record<string, unknown> | null;
 }
 
 interface HealthDataGroup {
@@ -149,7 +165,7 @@ function useDailyMetrics(userId: string | undefined, provider: string) {
       const { data: rows, error } = await supabase
         .from('health_daily_metrics')
         .select(
-          'date, sleep_duration_minutes, sleep_score, hrv_avg, resting_heart_rate, stress_avg, body_battery_high, body_battery_low, steps, active_calories, total_calories, recovery_score',
+          'date, sleep_duration_minutes, sleep_score, sleep_deep_minutes, sleep_light_minutes, sleep_rem_minutes, sleep_awake_minutes, hrv_avg, resting_heart_rate, stress_avg, body_battery_high, body_battery_low, steps, active_calories, total_calories, recovery_score, vo2max, spo2_avg, respiration_avg, intensity_minutes, floors_climbed',
         )
         .eq('user_id', userId)
         .eq('source', source)
@@ -189,7 +205,7 @@ function useActivities(userId: string | undefined, provider: string) {
 
       const { data: rows, error } = await supabase
         .from('activities')
-        .select('id, sport, start_time, duration_seconds, source, raw_data')
+        .select('id, sport, start_time, duration_seconds, distance_meters, avg_hr, max_hr, calories, training_effect, vo2max_activity, avg_pace_min_km, elevation_gain_m, source')
         .eq('user_id', userId)
         .eq('source', source)
         .gte('start_time', new Date(since).toISOString())
@@ -346,6 +362,26 @@ function DailyMetricsSection({ metrics }: { metrics: DailyMetric[] }) {
   if (latest.recovery_score != null) {
     cards.push({ label: 'Erholung', value: `${latest.recovery_score}%`, sub: formatDateDE(latest.date) });
   }
+  if (latest.vo2max != null) {
+    cards.push({ label: 'VO2max', value: `${latest.vo2max}`, sub: 'ml/kg/min' });
+  }
+  if (latest.spo2_avg != null) {
+    cards.push({ label: 'SpO2', value: `${latest.spo2_avg}%`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.respiration_avg != null) {
+    cards.push({ label: 'Atmung', value: `${latest.respiration_avg}`, sub: 'Atemzüge/min' });
+  }
+  if (latest.intensity_minutes != null) {
+    cards.push({ label: 'Intensitätsmin.', value: `${latest.intensity_minutes}`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.floors_climbed != null) {
+    cards.push({ label: 'Stockwerke', value: `${latest.floors_climbed}`, sub: formatDateDE(latest.date) });
+  }
+  if (latest.sleep_deep_minutes != null) {
+    const light = latest.sleep_light_minutes ?? '–';
+    const rem = latest.sleep_rem_minutes ?? '–';
+    cards.push({ label: 'Schlafphasen', value: `${formatMinutes(latest.sleep_deep_minutes)} tief`, sub: `Leicht: ${light} / REM: ${rem} Min.` });
+  }
 
   return (
     <Card>
@@ -407,9 +443,7 @@ function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
   return (
     <Card>
       {activities.map((a, idx) => {
-        const rawData = a.raw_data ?? {};
-        const distance = rawData.distance_km as number | undefined;
-        const avgHr = rawData.avg_heart_rate as number | undefined;
+        const distanceKm = a.distance_meters != null ? a.distance_meters / 1000 : null;
         const isLast = idx === activities.length - 1;
 
         return (
@@ -426,20 +460,40 @@ function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
                 {formatDateDE(a.start_time)}
               </Text>
             </View>
-            <View className="flex-row gap-4 mt-1">
+            <View className="flex-row flex-wrap gap-3 mt-1">
               {a.duration_seconds != null && (
                 <Text className="text-xs" style={{ color: Colors.textSecondary }}>
                   {formatSeconds(a.duration_seconds)}
                 </Text>
               )}
-              {distance != null && (
+              {distanceKm != null && distanceKm > 0 && (
                 <Text className="text-xs" style={{ color: Colors.textSecondary }}>
-                  {distance.toFixed(1)} km
+                  {distanceKm.toFixed(1)} km
                 </Text>
               )}
-              {avgHr != null && (
+              {a.avg_hr != null && (
                 <Text className="text-xs" style={{ color: Colors.textSecondary }}>
-                  {avgHr} bpm
+                  {a.avg_hr} bpm
+                </Text>
+              )}
+              {a.calories != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  {a.calories} kcal
+                </Text>
+              )}
+              {a.avg_pace_min_km != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  {a.avg_pace_min_km.toFixed(1)} min/km
+                </Text>
+              )}
+              {a.elevation_gain_m != null && (
+                <Text className="text-xs" style={{ color: Colors.textSecondary }}>
+                  ↑{a.elevation_gain_m.toFixed(0)} m
+                </Text>
+              )}
+              {a.training_effect != null && (
+                <Text className="text-xs" style={{ color: Colors.accent }}>
+                  TE {a.training_effect.toFixed(1)}
                 </Text>
               )}
             </View>
