@@ -13,19 +13,35 @@ import Constants from 'expo-constants';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/authStore';
+import { isStreamActive } from '@/lib/chatActiveFlag';
 
 /**
  * Configure default notification behaviour (foreground display).
  * Must be called before any notification is received.
  */
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    // Suppress "coach replied" notifications when the user is actively
+    // watching the SSE stream (they already see the response).
+    const data = notification.request.content.data as Record<string, unknown> | undefined;
+    if (data?.type === 'coach_response' && isStreamActive()) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        shouldShowBanner: false,
+        shouldShowList: false,
+      };
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 /**
@@ -103,7 +119,7 @@ export function usePushNotifications(): void {
         | undefined;
 
       // Navigate to coach chat when a coach notification is tapped
-      if (data?.type === 'coach_message' || data?.navigate === 'coach') {
+      if (data?.type === 'coach_message' || data?.type === 'coach_response' || data?.navigate === 'coach') {
         router.push('/(tabs)/coach');
       }
     },

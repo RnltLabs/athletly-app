@@ -28,6 +28,7 @@ import type {
 } from '@/types/chat';
 
 import EventSource from 'react-native-sse';
+import { setStreamActive } from '@/lib/chatActiveFlag';
 
 /**
  * Custom SSE event types from the Python backend.
@@ -76,6 +77,7 @@ export function useChatStream(): UseChatStreamResult {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
       setIsStreaming(false);
+      setStreamActive(false);
       setProgress(null);
     }
   }, []);
@@ -108,6 +110,7 @@ export function useChatStream(): UseChatStreamResult {
       abort();
 
       setIsStreaming(true);
+      setStreamActive(true);
       setProgress(null);
       setToolsUsed([]);
       setUsage(null);
@@ -267,6 +270,7 @@ export function useChatStream(): UseChatStreamResult {
 
             es.close();
             setIsStreaming(false);
+            setStreamActive(false);
             setProgress(null);
             eventSourceRef.current = null;
             reject(new Error('Stream error'));
@@ -276,6 +280,7 @@ export function useChatStream(): UseChatStreamResult {
             console.log('[useChatStream] Stream complete');
             es.close();
             setIsStreaming(false);
+            setStreamActive(false);
             setProgress(null);
             eventSourceRef.current = null;
             resolve();
