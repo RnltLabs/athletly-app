@@ -150,11 +150,13 @@ export function ChatInput({
             textAlignVertical="center"
             onContentSizeChange={(e) => {
               const contentHeight = e.nativeEvent.contentSize.height;
-              const newHeight = Math.max(
-                MIN_INPUT_HEIGHT,
-                Math.min(contentHeight + VERTICAL_PADDING, MAX_INPUT_HEIGHT),
+              const newHeight = Math.round(
+                Math.max(
+                  MIN_INPUT_HEIGHT,
+                  Math.min(contentHeight + VERTICAL_PADDING, MAX_INPUT_HEIGHT),
+                ),
               );
-              setInputHeight(newHeight);
+              setInputHeight((prev) => Math.abs(prev - newHeight) > 2 ? newHeight : prev);
             }}
             style={{
               flex: 1,
