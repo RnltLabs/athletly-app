@@ -492,7 +492,7 @@ function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
                 </Text>
               )}
               {a.training_effect != null && (
-                <Text className="text-xs" style={{ color: Colors.accent }}>
+                <Text className="text-xs" style={{ color: Colors.primary }}>
                   TE {a.training_effect.toFixed(1)}
                 </Text>
               )}
@@ -568,7 +568,7 @@ function RawDataRow({
         {loading ? (
           <ActivityIndicator size="small" color={Colors.textMuted} />
         ) : (
-          <Text className="text-sm font-medium" style={{ color: Colors.accent }}>
+          <Text className="text-sm font-medium" style={{ color: Colors.primary }}>
             {group.count} Einträge {expanded ? '▲' : '▼'}
           </Text>
         )}

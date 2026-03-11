@@ -49,7 +49,7 @@ const INITIAL_STATE = {
   wearable: null,
   garminCredentials: null,
   currentStep: 0,
-} as const;
+};
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   ...INITIAL_STATE,
