@@ -2,6 +2,8 @@
 
 > Comprehensive design specification for the Athletly app redesign.
 > Based on detailed visual analysis of HubFit's UI/UX patterns, adapted for Athletly's fitness coaching context.
+>
+> Related: [Companion Onboarding](./companion-onboarding.md)
 
 ---
 
