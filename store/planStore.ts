@@ -86,8 +86,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
         .lte('week_start', mondayDate)
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        // PGRST116 = no rows found (not a real error)
+      if (error && error.code !== 'PGRST116' && error.code !== 'PGRST205') {
+        // PGRST116 = no rows found, PGRST205 = table not found (not yet created)
         throw error;
       }
 
@@ -111,7 +111,8 @@ export const usePlanStore = create<PlanState>((set, get) => ({
       }
     } catch (err) {
       endTimer();
-      log.error(TAG, 'Error fetching plan', { error: String(err) });
+      const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      log.error(TAG, 'Error fetching plan', { error: errMsg });
       set({
         isLoading: false,
         error: err instanceof Error ? err.message : 'Fehler beim Laden des Plans',
