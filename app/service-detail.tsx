@@ -60,6 +60,14 @@ interface HealthDataGroup {
   count: number;
 }
 
+interface HealthDataRecord {
+  id: string;
+  data_type: string;
+  value: Record<string, unknown>;
+  recorded_at: string;
+  source: string | null;
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -390,7 +398,7 @@ function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
     return (
       <Card>
         <Text className="text-sm text-center py-4" style={{ color: Colors.textMuted }}>
-          Keine Aktivitaeten in den letzten 30 Tagen
+          Keine Aktivitäten in den letzten 30 Tagen
         </Text>
       </Card>
     );
@@ -442,7 +450,103 @@ function ActivitiesSection({ activities }: { activities: ActivityRow[] }) {
   );
 }
 
-function RawDataSection({ groups }: { groups: HealthDataGroup[] }) {
+function RawDataRow({
+  group,
+  userId,
+  provider,
+  isLast,
+}: {
+  group: HealthDataGroup;
+  userId: string;
+  provider: string;
+  isLast: boolean;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [records, setRecords] = useState<HealthDataRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const loadRecords = useCallback(async () => {
+    if (records.length > 0) {
+      setExpanded((prev) => !prev);
+      return;
+    }
+    setLoading(true);
+    try {
+      const since = daysAgo(7);
+      const { data: rows, error } = await supabase
+        .from('health_data')
+        .select('id, data_type, value, recorded_at, source')
+        .eq('user_id', userId)
+        .eq('provider', provider)
+        .eq('data_type', group.data_type)
+        .gte('recorded_at', new Date(since).toISOString())
+        .order('recorded_at', { ascending: false })
+        .limit(100);
+
+      if (!error && rows) {
+        setRecords(rows);
+        setExpanded(true);
+      }
+    } catch (err) {
+      log.error(TAG, 'Failed to load raw records', { error: String(err) });
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, provider, group.data_type, records.length]);
+
+  const formatValue = (value: Record<string, unknown>): string => {
+    if (value.quantity != null && value.unit) return `${value.quantity} ${value.unit}`;
+    if (value.value != null) return String(value.value);
+    const keys = Object.keys(value).filter((k) => !['startDate', 'endDate', 'metadata'].includes(k));
+    if (keys.length <= 3) return keys.map((k) => `${k}: ${value[k]}`).join(', ');
+    return `${keys.length} Felder`;
+  };
+
+  return (
+    <View style={!isLast ? { borderBottomWidth: 1, borderBottomColor: Colors.divider } : undefined}>
+      <Pressable
+        onPress={loadRecords}
+        className="flex-row justify-between items-center py-2.5"
+      >
+        <Text className="text-sm flex-1" style={{ color: Colors.textPrimary }}>
+          {group.data_type}
+        </Text>
+        {loading ? (
+          <ActivityIndicator size="small" color={Colors.textMuted} />
+        ) : (
+          <Text className="text-sm font-medium" style={{ color: Colors.accent }}>
+            {group.count} Einträge {expanded ? '▲' : '▼'}
+          </Text>
+        )}
+      </Pressable>
+
+      {expanded && records.length > 0 && (
+        <ScrollView
+          style={{ maxHeight: 240 }}
+          nestedScrollEnabled
+          showsVerticalScrollIndicator
+        >
+          {records.map((r) => (
+            <View
+              key={r.id}
+              className="pl-3 py-1.5 ml-2"
+              style={{ borderLeftWidth: 2, borderLeftColor: Colors.divider }}
+            >
+              <Text className="text-[11px]" style={{ color: Colors.textMuted }}>
+                {formatDateDE(r.recorded_at)}
+              </Text>
+              <Text className="text-xs mt-0.5" style={{ color: Colors.textSecondary }} numberOfLines={2}>
+                {formatValue(r.value)}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+function RawDataSection({ groups, userId, provider }: { groups: HealthDataGroup[]; userId: string; provider: string }) {
   if (groups.length === 0) {
     return (
       <Card>
@@ -455,23 +559,15 @@ function RawDataSection({ groups }: { groups: HealthDataGroup[] }) {
 
   return (
     <Card>
-      {groups.map((g, idx) => {
-        const isLast = idx === groups.length - 1;
-        return (
-          <View
-            key={g.data_type}
-            className="flex-row justify-between py-2.5"
-            style={!isLast ? { borderBottomWidth: 1, borderBottomColor: Colors.divider } : undefined}
-          >
-            <Text className="text-sm" style={{ color: Colors.textPrimary }}>
-              {g.data_type}
-            </Text>
-            <Text className="text-sm font-medium" style={{ color: Colors.textSecondary }}>
-              {g.count} Eintraege
-            </Text>
-          </View>
-        );
-      })}
+      {groups.map((g, idx) => (
+        <RawDataRow
+          key={g.data_type}
+          group={g}
+          userId={userId}
+          provider={provider}
+          isLast={idx === groups.length - 1}
+        />
+      ))}
     </Card>
   );
 }
@@ -520,7 +616,7 @@ export default function ServiceDetailScreen() {
               className="mr-3 rounded-full p-1"
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Zurueck"
+              accessibilityLabel="Zurück"
             >
               <ArrowLeft size={22} color="#FFFFFF" />
             </Pressable>
@@ -545,19 +641,19 @@ export default function ServiceDetailScreen() {
           <LoadingSkeleton />
         ) : (
           <>
-            {/* Taegliche Metriken */}
-            <SectionTitle title="Taegliche Metriken" />
+            {/* Tägliche Metriken */}
+            <SectionTitle title="Tägliche Metriken" />
             <DailyMetricsSection metrics={metrics.data} />
 
-            {/* Aktivitaeten */}
-            <SectionTitle title="Aktivitaeten" />
+            {/* Aktivitäten */}
+            <SectionTitle title="Aktivitäten" />
             <ActivitiesSection activities={activities.data} />
 
             {/* Rohdaten — nur Apple Health / Health Connect */}
             {healthData.isRawProvider && (
               <>
                 <SectionTitle title="Rohdaten (7 Tage)" />
-                <RawDataSection groups={healthData.data} />
+                <RawDataSection groups={healthData.data} userId={userId ?? ''} provider={provider ?? ''} />
               </>
             )}
           </>
