@@ -19,6 +19,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  AppState,
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { GradientHeader } from '@/components/ui/GradientHeader';
@@ -80,6 +81,17 @@ export default function CoachScreen() {
       loadMessages(user.id);
     }
   }, [user?.id, loadMessages]);
+
+  // Reload messages when app returns from background (e.g. after push notification)
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && user?.id && !isStreaming) {
+        log.info(TAG, 'App became active — reloading messages');
+        loadMessages(user.id);
+      }
+    });
+    return () => subscription.remove();
+  }, [user?.id, isStreaming, loadMessages]);
 
   // Show welcome quick replies when only welcome message present
   useEffect(() => {
