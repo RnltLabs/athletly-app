@@ -25,9 +25,7 @@ interface ChatInputProps {
 
 const MAX_INPUT_LINES = 5;
 const LINE_HEIGHT = 20;
-const VERTICAL_PADDING = 16; // 8px top + 8px bottom (py-2)
-const MIN_INPUT_HEIGHT = LINE_HEIGHT + VERTICAL_PADDING;
-const MAX_INPUT_HEIGHT = MAX_INPUT_LINES * LINE_HEIGHT + VERTICAL_PADDING;
+const MAX_INPUT_HEIGHT = MAX_INPUT_LINES * LINE_HEIGHT + 16;
 
 function PulsingMic({ onPress }: { onPress: () => void }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -75,7 +73,6 @@ export function ChatInput({
   disabled = false,
 }: ChatInputProps) {
   const [text, setText] = useState('');
-  const [inputHeight, setInputHeight] = useState(MIN_INPUT_HEIGHT);
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
 
@@ -91,7 +88,6 @@ export function ChatInput({
     if (trimmed.length === 0) return;
     onSend(trimmed);
     setText('');
-    setInputHeight(MIN_INPUT_HEIGHT);
   };
 
   const handleMicPress = () => {
@@ -128,12 +124,12 @@ export function ChatInput({
           </Pressable>
         )}
 
-        {/* Text input */}
+        {/* Text input — no explicit height, let TextInput auto-size */}
         <View
-          className="flex-1 rounded-2xl px-4"
+          className="flex-1 rounded-2xl px-4 justify-center"
           style={{
             backgroundColor: '#F5F6F8',
-            height: inputHeight,
+            minHeight: 36,
             maxHeight: MAX_INPUT_HEIGHT,
           }}
         >
@@ -146,23 +142,13 @@ export function ChatInput({
             onChangeText={setText}
             onSubmitEditing={handleSend}
             multiline
-            scrollEnabled={inputHeight >= MAX_INPUT_HEIGHT}
+            scrollEnabled
             textAlignVertical="center"
-            onContentSizeChange={(e) => {
-              const contentHeight = e.nativeEvent.contentSize.height;
-              const newHeight = Math.round(
-                Math.max(
-                  MIN_INPUT_HEIGHT,
-                  Math.min(contentHeight + VERTICAL_PADDING, MAX_INPUT_HEIGHT),
-                ),
-              );
-              setInputHeight((prev) => Math.abs(prev - newHeight) > 2 ? newHeight : prev);
-            }}
             style={{
-              flex: 1,
               lineHeight: LINE_HEIGHT,
               paddingTop: 8,
               paddingBottom: 8,
+              maxHeight: MAX_INPUT_HEIGHT,
             }}
             editable={!disabled}
             returnKeyType="default"
