@@ -8,11 +8,28 @@
 
 import React from 'react';
 import { ScrollView, Pressable, Text } from 'react-native';
+import { Colors } from '@/lib/colors';
 
 interface QuickRepliesProps {
   replies: string[];
   onSelect: (reply: string) => void;
 }
+
+const CHIP_STYLE = {
+  backgroundColor: '#FFFFFF',
+  borderWidth: 1,
+  borderColor: 'rgba(37,99,235,0.2)',
+  borderRadius: 999,
+  paddingHorizontal: 16,
+  paddingVertical: 10,
+  marginRight: 8,
+} as const;
+
+const CHIP_LABEL_STYLE = {
+  color: Colors.primary,
+  fontSize: 14,
+  fontWeight: '500' as const,
+};
 
 export function QuickReplies({ replies, onSelect }: QuickRepliesProps) {
   if (replies.length === 0) {
@@ -23,22 +40,19 @@ export function QuickReplies({ replies, onSelect }: QuickRepliesProps) {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerClassName="px-4 py-2 gap-2"
+      contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 8 }}
       keyboardShouldPersistTaps="handled"
     >
       {replies.map((reply) => (
         <Pressable
           key={reply}
           onPress={() => onSelect(reply)}
-          className="bg-white border border-primary/20 rounded-full px-4 py-2.5"
-          style={({ pressed }) => ({
-            backgroundColor: pressed ? 'rgba(37,99,235,0.08)' : undefined,
-            borderColor: pressed ? 'rgba(37,99,235,0.3)' : undefined,
-          })}
+          style={CHIP_STYLE}
+          android_ripple={{ color: 'rgba(37,99,235,0.08)' }}
           accessibilityRole="button"
           accessibilityLabel={reply}
         >
-          <Text className="text-primary text-sm font-medium">{reply}</Text>
+          <Text style={CHIP_LABEL_STYLE}>{reply}</Text>
         </Pressable>
       ))}
     </ScrollView>

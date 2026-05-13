@@ -93,6 +93,7 @@ export default function CoachScreen() {
   >([]);
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
+  const autoOnboardingFired = useRef(false);
 
   useEffect(() => {
     log.info(TAG, 'Screen mounted', { userId: user?.id?.slice(0, 8) });
@@ -119,10 +120,10 @@ export default function CoachScreen() {
   }, [user?.id, isStreaming, loadMessages]);
 
   useEffect(() => {
-    if (messages.length === 1 && messages[0]?.id === 'welcome') {
+    if (messages.length === 1 && messages[0]?.id === 'welcome' && isOnboarded) {
       setQuickReplies(WELCOME_REPLIES);
     }
-  }, [messages]);
+  }, [messages, isOnboarded]);
 
   const handleActionRequest = useCallback((action: ActionRequest) => {
     log.info(TAG, 'Action request received', { type: action.type });
@@ -211,6 +212,23 @@ export default function CoachScreen() {
       handleSend(prefill);
     }
   }, [prefill, handleSend]);
+
+  // First-time onboarding auto-trigger: when a fresh user with no real chat
+  // history lands here, kick off the agent's onboarding greeting automatically
+  // so the user never sees the static placeholder bubble.
+  useEffect(() => {
+    if (autoOnboardingFired.current) return;
+    if (!user?.id) return;
+    if (isOnboarded) return;
+    if (sessionId !== null) return;
+    if (messages.length !== 1) return;
+    if (messages[0]?.id !== 'welcome') return;
+
+    autoOnboardingFired.current = true;
+    log.info(TAG, 'Auto-firing onboarding greeting for fresh user');
+    useChatStore.getState().clearMessages();
+    handleSend('Hallo');
+  }, [user?.id, isOnboarded, sessionId, messages, handleSend]);
 
   const handleQuickReply = useCallback(
     (reply: string) => {
