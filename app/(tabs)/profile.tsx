@@ -256,7 +256,7 @@ export default function ProfileScreen() {
   const handleResetProfile = useCallback(() => {
     Alert.alert(
       'Daten zurueck setzen',
-      'Alle Trainingsdaten, Plaene, Chat-Verlauf und Verbindungen werden geloescht. Du bleibst eingeloggt und startest mit einem leeren Profil. Fortfahren?',
+      'Profil, Chat-Verlauf, Plaene, Trainingsdaten und Health-Metrics werden geloescht. Garmin/Strava-Verbindungen bleiben erhalten, damit du nicht neu einloggen musst. Fortfahren?',
       [
         { text: 'Abbrechen', style: 'cancel' },
         {
