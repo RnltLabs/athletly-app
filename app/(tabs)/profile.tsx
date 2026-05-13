@@ -267,7 +267,9 @@ export default function ProfileScreen() {
               await apiPost('/profile/reset');
               useChatStore.getState().clearMessages();
               useAuthStore.getState().setOnboarded(false);
-              await fetchConnectedServices();
+              if (user?.id) {
+                fetchConnectedServices(user.id);
+              }
               router.replace('/(tabs)/coach');
               Alert.alert('Erledigt', 'Dein Profil wurde zurueckgesetzt.');
             } catch (err) {
@@ -281,7 +283,7 @@ export default function ProfileScreen() {
         },
       ],
     );
-  }, [router, fetchConnectedServices]);
+  }, [router, fetchConnectedServices, user?.id]);
 
   /**
    * Logout with confirmation dialog.
