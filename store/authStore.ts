@@ -27,18 +27,23 @@ interface AuthState {
 /**
  * Check if user has completed onboarding by querying profiles table.
  * The profiles table has an `onboarding_complete` boolean column.
+ *
+ * The Supabase client can stall on certain auth-refresh edge cases (e.g.
+ * a brand-new user without a profile row, or a token refresh racing the
+ * query). We bound the wait with a 3s timeout - on miss we assume
+ * not-onboarded so the chat can render and the agent can drive the
+ * onboarding skill.
  */
 async function checkOnboardingStatus(userId: string): Promise<boolean> {
   const endTimer = log.time(TAG, `checkOnboardingStatus(${userId.slice(0, 8)}...)`);
-  try {
+
+  const query = (async () => {
     const { data, error } = await supabase
       .from('profiles')
       .select('onboarding_complete')
       .eq('user_id', userId)
       .limit(1)
       .maybeSingle();
-
-    endTimer();
 
     if (error) {
       log.warn(TAG, 'Onboarding status query error', { message: error.message, code: error.code });
@@ -47,6 +52,19 @@ async function checkOnboardingStatus(userId: string): Promise<boolean> {
 
     const result = data?.onboarding_complete === true;
     log.info(TAG, `Onboarding status: ${result}`, { data });
+    return result;
+  })();
+
+  const timeout = new Promise<boolean>((resolve) => {
+    setTimeout(() => {
+      log.warn(TAG, 'Onboarding status query timed out after 3s, defaulting to false');
+      resolve(false);
+    }, 3000);
+  });
+
+  try {
+    const result = await Promise.race([query, timeout]);
+    endTimer();
     return result;
   } catch (err) {
     endTimer();
