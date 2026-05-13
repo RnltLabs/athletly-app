@@ -119,10 +119,12 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       className={className}
-      style={({ pressed }) => [
-        VARIANT_STYLES[variant],
-        { opacity: pressed && !disabled ? 0.8 : disabled ? 0.5 : 1 },
-      ]}
+      style={
+        disabled
+          ? [VARIANT_STYLES[variant], { opacity: 0.5 }]
+          : VARIANT_STYLES[variant]
+      }
+      android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       accessibilityLabel={label}

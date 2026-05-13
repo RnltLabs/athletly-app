@@ -176,10 +176,12 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
             <Pressable
               onPress={handleSignup}
               disabled={isLoading}
-              style={({ pressed }) => [
-                SUBMIT_BUTTON_STYLE,
-                { opacity: pressed && !isLoading ? 0.85 : isLoading ? 0.5 : 1 },
-              ]}
+              style={
+                isLoading
+                  ? [SUBMIT_BUTTON_STYLE, { opacity: 0.5 }]
+                  : SUBMIT_BUTTON_STYLE
+              }
+              android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
               accessibilityRole="button"
               accessibilityLabel="Account erstellen"
               accessibilityState={{ disabled: isLoading }}
@@ -187,7 +189,7 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Text className="font-semibold text-base" style={{ color: '#FFFFFF' }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
                   Account erstellen
                 </Text>
               )}

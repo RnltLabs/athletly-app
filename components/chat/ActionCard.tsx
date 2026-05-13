@@ -4,6 +4,10 @@
  * Inline call-to-action card for agent-proposed actions in the chat.
  * Strong primary CTA with brand color; optional description above the button.
  * Used for signup, garmin connect, and future action types.
+ *
+ * Style note: NativeWind's wrapped Pressable does not reliably honour the
+ * function-form of the `style` prop, so we use a plain object style and skip
+ * the pressed-state visual feedback for now.
  */
 
 import React from 'react';
@@ -25,6 +29,7 @@ const CARD_STYLE = {
   backgroundColor: Colors.surface,
   borderRadius: 16,
   padding: 16,
+  marginBottom: 12,
   shadowColor: '#000',
   shadowOffset: { width: 0, height: 1 },
   shadowOpacity: 0.06,
@@ -36,6 +41,7 @@ const PRIMARY_BUTTON_STYLE = {
   backgroundColor: Colors.primary,
   borderRadius: 12,
   height: 48,
+  width: '100%' as const,
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   paddingHorizontal: 20,
@@ -50,12 +56,34 @@ const SUBTLE_BUTTON_STYLE = {
   backgroundColor: Colors.primaryUltraLight,
   borderRadius: 12,
   height: 48,
+  width: '100%' as const,
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   paddingHorizontal: 20,
   borderWidth: 1,
   borderColor: Colors.primaryLight,
 };
+
+const DESCRIPTION_STYLE = {
+  color: Colors.textSecondary,
+  fontSize: 14,
+  lineHeight: 20,
+  marginBottom: 12,
+} as const;
+
+const PRIMARY_LABEL_STYLE = {
+  color: '#FFFFFF',
+  fontSize: 16,
+  fontWeight: '600' as const,
+} as const;
+
+const SUBTLE_LABEL_STYLE = {
+  color: Colors.primary,
+  fontSize: 16,
+  fontWeight: '600' as const,
+} as const;
+
+const DISABLED_STYLE = { opacity: 0.5 } as const;
 
 export function ActionCard({
   label,
@@ -68,43 +96,28 @@ export function ActionCard({
   const isDisabled = disabled || loading;
   const isPrimary = variant === 'primary';
 
+  const buttonStyle = isPrimary ? PRIMARY_BUTTON_STYLE : SUBTLE_BUTTON_STYLE;
+  const labelStyle = isPrimary ? PRIMARY_LABEL_STYLE : SUBTLE_LABEL_STYLE;
+  const indicatorColor = isPrimary ? '#FFFFFF' : Colors.primary;
+
   return (
-    <View className="self-stretch mb-3">
-      <View style={CARD_STYLE}>
-        {description && (
-          <Text
-            className="text-sm leading-5 mb-3"
-            style={{ color: Colors.textSecondary }}
-          >
-            {description}
-          </Text>
+    <View style={CARD_STYLE}>
+      {description ? <Text style={DESCRIPTION_STYLE}>{description}</Text> : null}
+      <Pressable
+        onPress={onPress}
+        disabled={isDisabled}
+        style={isDisabled ? [buttonStyle, DISABLED_STYLE] : buttonStyle}
+        android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        accessibilityState={{ disabled: isDisabled }}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={indicatorColor} />
+        ) : (
+          <Text style={labelStyle}>{label}</Text>
         )}
-        <Pressable
-          onPress={onPress}
-          disabled={isDisabled}
-          style={({ pressed }) => [
-            isPrimary ? PRIMARY_BUTTON_STYLE : SUBTLE_BUTTON_STYLE,
-            { opacity: pressed && !isDisabled ? 0.85 : isDisabled ? 0.5 : 1 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel={label}
-          accessibilityState={{ disabled: isDisabled }}
-        >
-          {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={isPrimary ? '#FFFFFF' : Colors.primary}
-            />
-          ) : (
-            <Text
-              className="font-semibold text-base"
-              style={{ color: isPrimary ? '#FFFFFF' : Colors.primary }}
-            >
-              {label}
-            </Text>
-          )}
-        </Pressable>
-      </View>
+      </Pressable>
     </View>
   );
 }
