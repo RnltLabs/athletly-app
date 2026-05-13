@@ -86,6 +86,65 @@ function addDays(dateISO: string, n: number): string {
 }
 
 /**
+ * Coerce a plan_data dict into a flat sessions[] array, tolerating older
+ * agent shapes. Mirrors the backend `_coerce_sessions` so the frontend
+ * stays in sync with plans saved before the canonical schema landed.
+ *
+ * Canonical: plan_data.sessions = [{ day, sport, ... }]
+ * Legacy:    plan_data.weekly_structure = { monday: {...}, friday: {...}, ... }
+ */
+const WEEKDAY_ORDER = [
+  'monday', 'tuesday', 'wednesday', 'thursday',
+  'friday', 'saturday', 'sunday',
+] as const;
+
+function coerceSessions(planData: Record<string, unknown>): Record<string, unknown>[] {
+  const direct = planData.sessions;
+  if (Array.isArray(direct) && direct.length > 0) {
+    return direct as Record<string, unknown>[];
+  }
+
+  const weekly = planData.weekly_structure;
+  if (weekly && typeof weekly === 'object' && !Array.isArray(weekly)) {
+    const weeklyObj = weekly as Record<string, unknown>;
+    const derived: Record<string, unknown>[] = [];
+
+    const mapEntry = (day: string, entry: Record<string, unknown>) => {
+      const duration = typeof entry.target_duration_min === 'number'
+        ? entry.target_duration_min
+        : typeof entry.duration_minutes === 'number'
+          ? entry.duration_minutes
+          : 0;
+      derived.push({
+        day,
+        sport: entry.sport,
+        name: entry.focus ?? entry.name,
+        description: entry.notes ?? entry.description,
+        duration_minutes: duration,
+        intensity: entry.intensity,
+      });
+    };
+
+    for (const day of WEEKDAY_ORDER) {
+      const entry = weeklyObj[day];
+      if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+        mapEntry(day, entry as Record<string, unknown>);
+      }
+    }
+    // Pick up any extra keys not in the canonical weekday list
+    for (const [key, entry] of Object.entries(weeklyObj)) {
+      if ((WEEKDAY_ORDER as readonly string[]).includes(key)) continue;
+      if (entry && typeof entry === 'object' && !Array.isArray(entry)) {
+        mapEntry(key, entry as Record<string, unknown>);
+      }
+    }
+    return derived;
+  }
+
+  return [];
+}
+
+/**
  * Transform a flat sessions array from the agent into day-grouped DayPlan[].
  *
  * Agent format:
@@ -190,12 +249,16 @@ export const usePlanStore = create<PlanState>((set, get) => ({
 
       if (data) {
         const planData = data.plan_data as Record<string, unknown> ?? {};
-        const sessions = Array.isArray(planData.sessions) ? planData.sessions : [];
+        // Coerce so plans saved in the legacy weekly_structure shape still
+        // populate the calendar. See coerceSessions() above.
+        const sessions = coerceSessions(planData);
         const startDate = typeof planData.start_date === 'string'
           ? planData.start_date
           : typeof planData.week_start === 'string'
             ? planData.week_start
-            : mondayDate;
+            : typeof planData.period_start === 'string'
+              ? planData.period_start
+              : mondayDate;
 
         const planWeekStart = getMondayOfWeek(startDate);
 
