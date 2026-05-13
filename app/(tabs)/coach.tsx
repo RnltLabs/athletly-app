@@ -33,6 +33,7 @@ import { CheckpointCard } from '@/components/chat/CheckpointCard';
 import { QuickReplies } from '@/components/chat/QuickReplies';
 import { GarminConnectActionCard } from '@/components/chat/GarminConnectActionCard';
 import { ActionCard } from '@/components/chat/ActionCard';
+import { renderUIComponent } from '@/components/chat/genui';
 import { log } from '@/lib/logger';
 import type {
   ChatMessage,
@@ -40,6 +41,7 @@ import type {
   ActionRequest,
   ChatContext,
   ChatItem,
+  UIComponent,
 } from '@/types/chat';
 
 const TAG = 'CoachScreen';
@@ -60,6 +62,16 @@ function makeActionItem(action: ActionRequest): Extract<ChatItem, { kind: 'actio
     actionType: action.type,
     label: action.label,
     payload: action.payload,
+    timestamp: new Date(),
+  };
+}
+
+function makeUIItem(component: UIComponent): Extract<ChatItem, { kind: 'ui' }> {
+  return {
+    kind: 'ui',
+    id: component.id,
+    component,
+    resolved: false,
     timestamp: new Date(),
   };
 }
@@ -90,6 +102,9 @@ export default function CoachScreen() {
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
   const [actionItems, setActionItems] = useState<
     ReadonlyArray<Extract<ChatItem, { kind: 'action' }>>
+  >([]);
+  const [uiItems, setUiItems] = useState<
+    ReadonlyArray<Extract<ChatItem, { kind: 'ui' }>>
   >([]);
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
@@ -128,6 +143,11 @@ export default function CoachScreen() {
   const handleActionRequest = useCallback((action: ActionRequest) => {
     log.info(TAG, 'Action request received', { type: action.type });
     setActionItems((prev) => [makeActionItem(action), ...prev]);
+  }, []);
+
+  const handleUIComponent = useCallback((component: UIComponent) => {
+    log.info(TAG, 'UI component received', { type: component.type, id: component.id });
+    setUiItems((prev) => [makeUIItem(component), ...prev]);
   }, []);
 
   const handleSend = useCallback(
@@ -176,6 +196,7 @@ export default function CoachScreen() {
             setPendingCheckpoint(cp);
           },
           handleActionRequest,
+          handleUIComponent,
         );
       } catch (err) {
         log.error(TAG, 'Send error', { error: String(err) });
@@ -203,6 +224,7 @@ export default function CoachScreen() {
       toolsUsed,
       isOnboarded,
       handleActionRequest,
+      handleUIComponent,
     ],
   );
 
@@ -238,6 +260,30 @@ export default function CoachScreen() {
     [handleSend],
   );
 
+  /**
+   * Latest unresolved UI component id - only this one accepts input. Older
+   * unresolved components (rare, shouldn't really happen) are also frozen
+   * so the user can't double-respond to stale prompts.
+   */
+  const activeUIComponentId = useMemo<string | null>(() => {
+    const latestUnresolved = uiItems.find((item) => !item.resolved);
+    return latestUnresolved ? latestUnresolved.id : null;
+  }, [uiItems]);
+
+  const handleUISubmit = useCallback(
+    (componentId: string, response: string) => {
+      setUiItems((prev) =>
+        prev.map((item) =>
+          item.id === componentId
+            ? { ...item, resolved: true, resolvedText: response }
+            : item,
+        ),
+      );
+      handleSend(response);
+    },
+    [handleSend],
+  );
+
   const handleCheckpointConfirm = useCallback(
     (accepted: boolean) => {
       confirmCheckpoint(accepted);
@@ -246,20 +292,35 @@ export default function CoachScreen() {
   );
 
   /**
-   * Build the inverted item list. We merge action items with messages by
-   * timestamp so that fresh action requests appear at the visual bottom.
+   * Build the inverted item list. Action items and GenUI items are
+   * pre-pended (newest first) so they appear at the visual bottom of the
+   * inverted FlatList. Each list keeps its own ordering by recency.
    */
   const items = useMemo<ReadonlyArray<ChatItem>>(() => {
     const messageItems: ChatItem[] = messages.map((m) => ({
       kind: 'message',
       message: m,
     }));
-    const merged: ChatItem[] = [...actionItems, ...messageItems];
+    const merged: ChatItem[] = [...uiItems, ...actionItems, ...messageItems];
     return merged;
-  }, [messages, actionItems]);
+  }, [messages, actionItems, uiItems]);
 
   const renderItem = useCallback(
     ({ item }: { item: ChatItem }) => {
+      if (item.kind === 'ui') {
+        const isActive = !item.resolved && item.id === activeUIComponentId;
+        return (
+          <View>
+            {renderUIComponent(
+              item.component,
+              (response) => handleUISubmit(item.id, response),
+              !isActive,
+              item.resolvedText,
+            )}
+          </View>
+        );
+      }
+
       if (item.kind === 'action') {
         if (item.actionType === 'garmin_connect') {
           return (
@@ -300,17 +361,27 @@ export default function CoachScreen() {
 
       return <ChatBubble message={message} />;
     },
-    [pendingCheckpoint, isConfirming, handleCheckpointConfirm],
+    [
+      pendingCheckpoint,
+      isConfirming,
+      handleCheckpointConfirm,
+      activeUIComponentId,
+      handleUISubmit,
+    ],
   );
 
   const keyExtractor = useCallback((item: ChatItem) => {
     if (item.kind === 'message') {
       return item.message.id;
     }
+    if (item.kind === 'ui') {
+      return `ui-${item.id}`;
+    }
     return item.id;
   }, []);
 
-  const showFreshSessionPlaceholder = messages.length === 0 && actionItems.length === 0;
+  const showFreshSessionPlaceholder =
+    messages.length === 0 && actionItems.length === 0 && uiItems.length === 0;
 
   return (
     <View className="flex-1 bg-background">
