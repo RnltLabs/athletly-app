@@ -13,6 +13,7 @@
  *   usage          -> {input_tokens, output_tokens, model}
  *   onboarding_complete -> {}
  *   action_request -> {action_type, label, payload}
+ *   ui_component   -> {type, id, props}
  *   error          -> {message, code}
  *   done           -> {}
  */
@@ -27,6 +28,8 @@ import type {
   ChatContext,
   Checkpoint,
   ActionRequest,
+  UIComponent,
+  UIComponentType,
 } from '@/types/chat';
 
 import EventSource from 'react-native-sse';
@@ -44,7 +47,23 @@ type SSEEvents =
   | 'usage'
   | 'onboarding_complete'
   | 'action_request'
+  | 'ui_component'
   | 'done';
+
+const VALID_UI_COMPONENT_TYPES: ReadonlyArray<UIComponentType> = [
+  'choice_single',
+  'choice_multi',
+  'number_stepper',
+  'date_picker',
+  'confirm',
+];
+
+function isUIComponentType(value: unknown): value is UIComponentType {
+  return (
+    typeof value === 'string' &&
+    (VALID_UI_COMPONENT_TYPES as ReadonlyArray<string>).includes(value)
+  );
+}
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://athletly.rnltlabs.de';
 
@@ -58,6 +77,7 @@ interface UseChatStreamResult {
     onOnboardingComplete?: () => void,
     onCheckpoint?: (checkpoint: Checkpoint) => void,
     onActionRequest?: (action: ActionRequest) => void,
+    onUIComponent?: (component: UIComponent) => void,
   ) => Promise<void>;
   isStreaming: boolean;
   progress: StreamProgress | null;
@@ -105,6 +125,7 @@ export function useChatStream(): UseChatStreamResult {
       onOnboardingComplete?: () => void,
       onCheckpoint?: (checkpoint: Checkpoint) => void,
       onActionRequest?: (action: ActionRequest) => void,
+      onUIComponent?: (component: UIComponent) => void,
     ) => {
       if (!session?.access_token) {
         setError('Nicht authentifiziert');
@@ -274,6 +295,39 @@ export function useChatStream(): UseChatStreamResult {
               onActionRequest?.(action);
             } catch (e) {
               console.warn('[useChatStream] Failed to parse action_request:', e);
+            }
+          });
+
+          es.addEventListener('ui_component', (event: any) => {
+            try {
+              const data = JSON.parse(event.data);
+              if (!isUIComponentType(data?.type)) {
+                console.warn(
+                  '[useChatStream] Ignoring ui_component with unknown type:',
+                  data?.type,
+                );
+                return;
+              }
+              if (typeof data.id !== 'string' || data.id.length === 0) {
+                console.warn('[useChatStream] Ignoring ui_component without id');
+                return;
+              }
+              const component: UIComponent = {
+                type: data.type,
+                id: data.id,
+                props:
+                  data.props && typeof data.props === 'object'
+                    ? data.props
+                    : {},
+              };
+              console.log(
+                '[useChatStream] UI component:',
+                component.type,
+                component.id,
+              );
+              onUIComponent?.(component);
+            } catch (e) {
+              console.warn('[useChatStream] Failed to parse ui_component:', e);
             }
           });
 

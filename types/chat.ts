@@ -57,8 +57,31 @@ export interface ActionRequest {
 }
 
 /**
+ * Generative UI component payload as it arrives via the `ui_component` SSE
+ * event. The frontend renders this inline in the chat history; the user's
+ * answer is then sent back as a normal user message via the standard
+ * sendMessage flow.
+ *
+ * The `props` field is intentionally loosely typed at the transport
+ * boundary - the GenUI registry narrows on `type` before rendering.
+ */
+export type UIComponentType =
+  | 'choice_single'
+  | 'choice_multi'
+  | 'number_stepper'
+  | 'date_picker'
+  | 'confirm';
+
+export interface UIComponent {
+  readonly type: UIComponentType;
+  readonly id: string;
+  readonly props: Record<string, unknown>;
+}
+
+/**
  * Chat history item discriminated union. A history slot is either a
- * normal message bubble or an inline action card requested by the agent.
+ * normal message bubble, an inline action card requested by the agent,
+ * or an inline generative-UI component.
  */
 export type ChatItem =
   | { readonly kind: 'message'; readonly message: ChatMessage }
@@ -68,5 +91,13 @@ export type ChatItem =
       readonly actionType: ActionType | string;
       readonly label: string;
       readonly payload: Record<string, unknown>;
+      readonly timestamp: Date;
+    }
+  | {
+      readonly kind: 'ui';
+      readonly id: string;
+      readonly component: UIComponent;
+      readonly resolved: boolean;
+      readonly resolvedText?: string;
       readonly timestamp: Date;
     };
