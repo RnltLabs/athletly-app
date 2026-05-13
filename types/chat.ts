@@ -70,7 +70,8 @@ export type UIComponentType =
   | 'choice_multi'
   | 'number_stepper'
   | 'date_picker'
-  | 'confirm';
+  | 'confirm'
+  | 'text_input';
 
 export interface UIComponent {
   readonly type: UIComponentType;

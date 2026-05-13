@@ -7,4 +7,7 @@ export { ChoiceCard } from './ChoiceCard';
 export { NumberStepper } from './NumberStepper';
 export { DatePickerCard } from './DatePickerCard';
 export { ConfirmCard } from './ConfirmCard';
+export { TextInputCard } from './TextInputCard';
 export { renderUIComponent } from './registry';
+export { SUBMIT_HANDLERS, hasSubmitHandler } from './submit-handlers';
+export type { SubmitHandler, SubmitResult, FieldValues } from './submit-handlers';

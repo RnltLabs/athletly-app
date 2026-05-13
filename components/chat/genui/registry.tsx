@@ -11,11 +11,12 @@
  */
 
 import React from 'react';
-import type { UIComponent } from './types';
+import type { UIComponent, TextInputFieldSpec, TextInputFieldType } from './types';
 import { ChoiceCard } from './ChoiceCard';
 import { NumberStepper } from './NumberStepper';
 import { DatePickerCard } from './DatePickerCard';
 import { ConfirmCard } from './ConfirmCard';
+import { TextInputCard } from './TextInputCard';
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
@@ -36,6 +37,39 @@ function asOptionalNumber(value: unknown): number | undefined {
 
 function asOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function asFieldType(value: unknown): TextInputFieldType | undefined {
+  if (value === 'text' || value === 'email' || value === 'password') return value;
+  return undefined;
+}
+
+function asBoolean(value: unknown): boolean | undefined {
+  return typeof value === 'boolean' ? value : undefined;
+}
+
+function asTextInputFields(value: unknown): ReadonlyArray<TextInputFieldSpec> {
+  if (!Array.isArray(value)) return [];
+  const result: TextInputFieldSpec[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const record = entry as Record<string, unknown>;
+    const name = asString(record.name, '');
+    const label = asString(record.label, '');
+    if (name.length === 0 || label.length === 0) continue;
+    result.push({
+      name,
+      label,
+      placeholder: asOptionalString(record.placeholder),
+      type: asFieldType(record.type),
+      isPassword: asBoolean(record.isPassword),
+    });
+  }
+  return result;
+}
+
+function asOnSubmit(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
 }
 
 export function renderUIComponent(
@@ -103,6 +137,21 @@ export function renderUIComponent(
           question={asString(props.question, '')}
           confirmLabel={asOptionalString(props.confirm_label)}
           cancelLabel={asOptionalString(props.cancel_label)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    case 'text_input': {
+      return (
+        <TextInputCard
+          id={component.id}
+          question={asString(props.question, '')}
+          fields={asTextInputFields(props.fields)}
+          submit_label={asOptionalString(props.submit_label)}
+          on_submit={asOnSubmit(props.on_submit)}
           disabled={disabled}
           resolvedText={resolvedText}
           onSubmit={onSubmit}

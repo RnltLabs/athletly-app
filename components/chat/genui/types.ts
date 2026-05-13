@@ -14,7 +14,8 @@ export type UIComponentType =
   | 'choice_multi'
   | 'number_stepper'
   | 'date_picker'
-  | 'confirm';
+  | 'confirm'
+  | 'text_input';
 
 export interface ChoiceSingleProps {
   readonly question: string;
@@ -50,6 +51,31 @@ export interface ConfirmProps {
   readonly question: string;
   readonly confirm_label?: string;
   readonly cancel_label?: string;
+}
+
+export type TextInputFieldType = 'text' | 'email' | 'password';
+
+export interface TextInputFieldSpec {
+  readonly name: string;
+  readonly label: string;
+  readonly placeholder?: string;
+  readonly type?: TextInputFieldType;
+  readonly isPassword?: boolean;
+}
+
+/**
+ * `on_submit` is the bridge between agent-driven and frontend-driven forms.
+ * - null/missing: serialize values as a chat message and let the agent
+ *   continue the conversation.
+ * - one of the keys in SUBMIT_HANDLERS: run a native side-effect (auth,
+ *   garmin connect, etc.) and only emit a follow-up message if the handler
+ *   asks for one.
+ */
+export interface TextInputProps {
+  readonly question: string;
+  readonly fields: ReadonlyArray<TextInputFieldSpec>;
+  readonly submit_label?: string;
+  readonly on_submit?: string | null;
 }
 
 /**
