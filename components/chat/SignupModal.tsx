@@ -7,12 +7,26 @@
  */
 
 import React, { useState } from 'react';
-import { View, Text, Modal, Pressable, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Modal, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
 import { X, Mail, Lock } from 'lucide-react-native';
-import { Button, Input } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/lib/colors';
 import { log } from '@/lib/logger';
+
+const SUBMIT_BUTTON_STYLE = {
+  backgroundColor: Colors.primary,
+  borderRadius: 12,
+  height: 52,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  paddingHorizontal: 20,
+  shadowColor: Colors.primary,
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.25,
+  shadowRadius: 10,
+  elevation: 4,
+};
 
 const TAG = 'SignupModal';
 
@@ -159,14 +173,25 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
               </View>
             )}
 
-            <Button
-              variant="primary"
-              size="lg"
-              label="Account erstellen"
+            <Pressable
               onPress={handleSignup}
-              loading={isLoading}
               disabled={isLoading}
-            />
+              style={({ pressed }) => [
+                SUBMIT_BUTTON_STYLE,
+                { opacity: pressed && !isLoading ? 0.85 : isLoading ? 0.5 : 1 },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel="Account erstellen"
+              accessibilityState={{ disabled: isLoading }}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text className="font-semibold text-base" style={{ color: '#FFFFFF' }}>
+                  Account erstellen
+                </Text>
+              )}
+            </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
       </Pressable>

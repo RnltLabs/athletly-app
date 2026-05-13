@@ -105,16 +105,20 @@ export function Button({
   const iconSize = iconSizeMap[size];
   const iconColor = ICON_COLORS[variant];
 
+  const className = [
+    'flex-row items-center justify-center',
+    isIcon ? iconOnlySizeClasses[size] : sizeClasses[size],
+    variantClasses[variant],
+    disabled ? 'opacity-50' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled || loading}
-      className={`
-        flex-row items-center justify-center
-        ${isIcon ? iconOnlySizeClasses[size] : sizeClasses[size]}
-        ${variantClasses[variant]}
-        ${disabled ? 'opacity-50' : ''}
-      `}
+      className={className}
       style={({ pressed }) => [
         VARIANT_STYLES[variant],
         { opacity: pressed && !disabled ? 0.8 : disabled ? 0.5 : 1 },
