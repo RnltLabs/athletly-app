@@ -12,8 +12,34 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   toolCalls?: string[];       // tool names used
+  toolSteps?: ReadonlyArray<ToolStep>; // structured tool sequence for the "Show Work" footer
   checkpointId?: string;      // if this message has a checkpoint
   synced?: boolean;           // whether persisted to backend
+}
+
+/**
+ * Status of a single tool step inside a tool group sequence.
+ * Used by the multi-step checklist (ToolGroup) while a turn is running
+ * and the "Show Work" footer (ShowWorkFooter) after the turn finishes.
+ */
+export type ToolStepStatus = 'pending' | 'running' | 'done' | 'error';
+
+export interface ToolStep {
+  readonly toolName: string;
+  readonly displayLabel: string;
+  readonly status: ToolStepStatus;
+}
+
+/**
+ * Richer per-tool event payload exposed by useChatStream's onToolEvent
+ * callback. Extends the legacy single-line status with the German label
+ * and the owning group id so the UI can render a multi-step checklist.
+ */
+export interface ToolEvent {
+  readonly name: string;
+  readonly args: Record<string, unknown>;
+  readonly displayLabel: string;
+  readonly groupId: string;
 }
 
 export interface StreamProgress {
@@ -82,7 +108,9 @@ export interface UIComponent {
 /**
  * Chat history item discriminated union. A history slot is either a
  * normal message bubble, an inline action card requested by the agent,
- * or an inline generative-UI component.
+ * an inline generative-UI component, or an in-flight tool group
+ * checklist that becomes a ShowWorkFooter on the assistant message
+ * once the group ends.
  */
 export type ChatItem =
   | { readonly kind: 'message'; readonly message: ChatMessage }
@@ -100,5 +128,12 @@ export type ChatItem =
       readonly component: UIComponent;
       readonly resolved: boolean;
       readonly resolvedText?: string;
+      readonly timestamp: Date;
+    }
+  | {
+      readonly kind: 'tool_group';
+      readonly id: string;
+      readonly steps: ReadonlyArray<ToolStep>;
+      readonly endedAt: Date | null;
       readonly timestamp: Date;
     };

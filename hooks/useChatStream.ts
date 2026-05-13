@@ -1,21 +1,23 @@
 /**
- * Chat Stream Hook — Athletly V2
+ * Chat Stream Hook - Athletly V2
  *
  * Streams chat responses from the Python backend via SSE.
  *
  * Event protocol (Python backend):
- *   session_start  -> {session_id}
- *   thinking       -> {text}
- *   tool_hint      -> {name, args}
- *   tool_result    -> {name, preview}
- *   tool_error     -> {detail}
- *   message        -> {text, checkpoint?: {id, type, preview}}
- *   usage          -> {input_tokens, output_tokens, model}
+ *   session_start    -> {session_id}
+ *   thinking         -> {text}
+ *   tool_hint        -> {name, args, display_label, group_id}
+ *   tool_result      -> {name, preview}
+ *   tool_error       -> {detail}
+ *   tool_group_start -> {group_id}
+ *   tool_group_end   -> {group_id}
+ *   message          -> {text, checkpoint?: {id, type, preview}}
+ *   usage            -> {input_tokens, output_tokens, model}
  *   onboarding_complete -> {}
- *   action_request -> {action_type, label, payload}
- *   ui_component   -> {type, id, props}
- *   error          -> {message, code}
- *   done           -> {}
+ *   action_request   -> {action_type, label, payload}
+ *   ui_component     -> {type, id, props}
+ *   error            -> {message, code}
+ *   done             -> {}
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
@@ -30,6 +32,7 @@ import type {
   ActionRequest,
   UIComponent,
   UIComponentType,
+  ToolEvent,
 } from '@/types/chat';
 
 import EventSource from 'react-native-sse';
@@ -44,6 +47,8 @@ type SSEEvents =
   | 'tool_hint'
   | 'tool_result'
   | 'tool_error'
+  | 'tool_group_start'
+  | 'tool_group_end'
   | 'usage'
   | 'onboarding_complete'
   | 'action_request'
@@ -79,6 +84,9 @@ interface UseChatStreamResult {
     onCheckpoint?: (checkpoint: Checkpoint) => void,
     onActionRequest?: (action: ActionRequest) => void,
     onUIComponent?: (component: UIComponent) => void,
+    onToolEvent?: (event: ToolEvent) => void,
+    onToolGroupStart?: (groupId: string) => void,
+    onToolGroupEnd?: (groupId: string) => void,
   ) => Promise<void>;
   isStreaming: boolean;
   progress: StreamProgress | null;
@@ -86,6 +94,15 @@ interface UseChatStreamResult {
   usage: UsageStats | null;
   error: string | null;
   abort: () => void;
+}
+
+/**
+ * Frontend fallback group id, used when the backend deploy hasn't shipped
+ * `group_id` on `tool_hint` yet. One id per turn keeps the UI grouping
+ * sensible without server cooperation.
+ */
+function makeFallbackGroupId(): string {
+  return `local-group-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 export function useChatStream(): UseChatStreamResult {
@@ -127,6 +144,9 @@ export function useChatStream(): UseChatStreamResult {
       onCheckpoint?: (checkpoint: Checkpoint) => void,
       onActionRequest?: (action: ActionRequest) => void,
       onUIComponent?: (component: UIComponent) => void,
+      onToolEvent?: (event: ToolEvent) => void,
+      onToolGroupStart?: (groupId: string) => void,
+      onToolGroupEnd?: (groupId: string) => void,
     ) => {
       if (!session?.access_token) {
         setError('Nicht authentifiziert');
@@ -147,6 +167,18 @@ export function useChatStream(): UseChatStreamResult {
 
       // Track session_id from the server (emitted via session_start event)
       let capturedSessionId = sessionId;
+
+      // Per-turn fallback group id. Used only if the backend `tool_hint`
+      // payload omits `group_id` (deploy mismatch). Once `tool_group_start`
+      // arrives we adopt the server-provided id.
+      let fallbackGroupId: string | null = null;
+      const ensureFallbackGroupId = (): string => {
+        if (fallbackGroupId === null) {
+          fallbackGroupId = makeFallbackGroupId();
+          onToolGroupStart?.(fallbackGroupId);
+        }
+        return fallbackGroupId;
+      };
 
       return new Promise<void>((resolve, reject) => {
         try {
@@ -197,15 +229,65 @@ export function useChatStream(): UseChatStreamResult {
           es.addEventListener('tool_hint', (event: any) => {
             try {
               const data = JSON.parse(event.data);
+              const name = typeof data.name === 'string' ? data.name : 'tool';
+              const displayLabel =
+                typeof data.display_label === 'string' && data.display_label.length > 0
+                  ? data.display_label
+                  : name;
+              const groupId =
+                typeof data.group_id === 'string' && data.group_id.length > 0
+                  ? data.group_id
+                  : ensureFallbackGroupId();
+              const args =
+                data.args && typeof data.args === 'object' ? data.args : {};
+
               const prog: StreamProgress = {
-                status: 'Using tool...',
-                tool: data.name,
+                status: displayLabel,
+                tool: name,
                 timestamp: new Date().toISOString(),
               };
               setProgress(prog);
               onProgress?.(prog);
+              onToolEvent?.({
+                name,
+                args,
+                displayLabel,
+                groupId,
+              });
             } catch (e) {
               console.warn('[useChatStream] Failed to parse tool_hint:', e);
+            }
+          });
+
+          es.addEventListener('tool_group_start', (event: any) => {
+            try {
+              const data = JSON.parse(event.data);
+              const groupId =
+                typeof data.group_id === 'string' && data.group_id.length > 0
+                  ? data.group_id
+                  : makeFallbackGroupId();
+              fallbackGroupId = groupId;
+              onToolGroupStart?.(groupId);
+            } catch (e) {
+              console.warn('[useChatStream] Failed to parse tool_group_start:', e);
+            }
+          });
+
+          es.addEventListener('tool_group_end', (event: any) => {
+            try {
+              const data = JSON.parse(event.data);
+              const groupId =
+                typeof data.group_id === 'string' && data.group_id.length > 0
+                  ? data.group_id
+                  : fallbackGroupId;
+              if (groupId) {
+                onToolGroupEnd?.(groupId);
+              }
+              if (groupId && groupId === fallbackGroupId) {
+                fallbackGroupId = null;
+              }
+            } catch (e) {
+              console.warn('[useChatStream] Failed to parse tool_group_end:', e);
             }
           });
 
