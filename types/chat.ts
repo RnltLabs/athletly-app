@@ -43,3 +43,30 @@ export interface StreamMessage {
   content: string;
   sessionId: string;
 }
+
+/**
+ * Action types the agent can request via the `action_request` SSE event.
+ * Keep this aligned with the backend's action_type enum.
+ */
+export type ActionType = 'garmin_connect' | 'signup';
+
+export interface ActionRequest {
+  readonly type: ActionType | string;
+  readonly label: string;
+  readonly payload: Record<string, unknown>;
+}
+
+/**
+ * Chat history item discriminated union. A history slot is either a
+ * normal message bubble or an inline action card requested by the agent.
+ */
+export type ChatItem =
+  | { readonly kind: 'message'; readonly message: ChatMessage }
+  | {
+      readonly kind: 'action';
+      readonly id: string;
+      readonly actionType: ActionType | string;
+      readonly label: string;
+      readonly payload: Record<string, unknown>;
+      readonly timestamp: Date;
+    };

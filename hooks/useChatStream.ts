@@ -12,6 +12,7 @@
  *   message        -> {text, checkpoint?: {id, type, preview}}
  *   usage          -> {input_tokens, output_tokens, model}
  *   onboarding_complete -> {}
+ *   action_request -> {action_type, label, payload}
  *   error          -> {message, code}
  *   done           -> {}
  */
@@ -25,6 +26,7 @@ import type {
   UsageStats,
   ChatContext,
   Checkpoint,
+  ActionRequest,
 } from '@/types/chat';
 
 import EventSource from 'react-native-sse';
@@ -41,6 +43,7 @@ type SSEEvents =
   | 'tool_error'
   | 'usage'
   | 'onboarding_complete'
+  | 'action_request'
   | 'done';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://athletly.rnltlabs.de';
@@ -54,6 +57,7 @@ interface UseChatStreamResult {
     context?: ChatContext,
     onOnboardingComplete?: () => void,
     onCheckpoint?: (checkpoint: Checkpoint) => void,
+    onActionRequest?: (action: ActionRequest) => void,
   ) => Promise<void>;
   isStreaming: boolean;
   progress: StreamProgress | null;
@@ -100,6 +104,7 @@ export function useChatStream(): UseChatStreamResult {
       context?: ChatContext,
       onOnboardingComplete?: () => void,
       onCheckpoint?: (checkpoint: Checkpoint) => void,
+      onActionRequest?: (action: ActionRequest) => void,
     ) => {
       if (!session?.access_token) {
         setError('Nicht authentifiziert');
@@ -252,6 +257,24 @@ export function useChatStream(): UseChatStreamResult {
               console.warn('[useChatStream] Failed to parse onboarding_complete:', e);
             }
             onOnboardingComplete?.();
+          });
+
+          es.addEventListener('action_request', (event: any) => {
+            try {
+              const data = JSON.parse(event.data);
+              const action: ActionRequest = {
+                type: data.action_type,
+                label: typeof data.label === 'string' ? data.label : '',
+                payload:
+                  data.payload && typeof data.payload === 'object'
+                    ? data.payload
+                    : {},
+              };
+              console.log('[useChatStream] Action request:', action.type);
+              onActionRequest?.(action);
+            } catch (e) {
+              console.warn('[useChatStream] Failed to parse action_request:', e);
+            }
           });
 
           es.addEventListener('error', (event: any) => {

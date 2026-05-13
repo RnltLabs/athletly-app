@@ -6,6 +6,9 @@ export type {
   ChatContext,
   Checkpoint,
   StreamMessage,
+  ActionType,
+  ActionRequest,
+  ChatItem,
 } from './chat';
 
 export type {
