@@ -56,6 +56,7 @@ const VALID_UI_COMPONENT_TYPES: ReadonlyArray<UIComponentType> = [
   'number_stepper',
   'date_picker',
   'confirm',
+  'text_input',
 ];
 
 function isUIComponentType(value: unknown): value is UIComponentType {
