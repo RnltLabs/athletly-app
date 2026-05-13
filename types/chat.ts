@@ -71,7 +71,8 @@ export type UIComponentType =
   | 'number_stepper'
   | 'date_picker'
   | 'confirm'
-  | 'text_input';
+  | 'text_input'
+  | 'plan_preview';
 
 export interface UIComponent {
   readonly type: UIComponentType;

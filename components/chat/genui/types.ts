@@ -15,7 +15,8 @@ export type UIComponentType =
   | 'number_stepper'
   | 'date_picker'
   | 'confirm'
-  | 'text_input';
+  | 'text_input'
+  | 'plan_preview';
 
 export interface ChoiceSingleProps {
   readonly question: string;
@@ -76,6 +77,26 @@ export interface TextInputProps {
   readonly fields: ReadonlyArray<TextInputFieldSpec>;
   readonly submit_label?: string;
   readonly on_submit?: string | null;
+}
+
+export interface PlanPreviewSessionProps {
+  readonly day?: string;
+  readonly date?: string;
+  readonly sport?: string;
+  readonly name?: string;
+  readonly description?: string;
+  readonly duration_minutes?: number;
+  readonly intensity?: string;
+  readonly steps?: ReadonlyArray<unknown>;
+  readonly notes?: string;
+}
+
+export interface PlanPreviewProps {
+  readonly plan_id: string;
+  readonly start_date?: string;
+  readonly focus?: string;
+  readonly sessions: ReadonlyArray<PlanPreviewSessionProps>;
+  readonly truncated_in_ui?: boolean;
 }
 
 /**

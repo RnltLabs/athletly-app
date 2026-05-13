@@ -17,6 +17,7 @@ import { NumberStepper } from './NumberStepper';
 import { DatePickerCard } from './DatePickerCard';
 import { ConfirmCard } from './ConfirmCard';
 import { TextInputCard } from './TextInputCard';
+import { PlanPreviewCard, type PlanPreviewSession } from './PlanPreviewCard';
 
 function asString(value: unknown, fallback = ''): string {
   return typeof value === 'string' ? value : fallback;
@@ -71,6 +72,33 @@ function asTextInputFields(value: unknown): ReadonlyArray<TextInputFieldSpec> {
 function asOnSubmit(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
 }
+
+function asPlanPreviewSessions(
+  value: unknown,
+): ReadonlyArray<PlanPreviewSession> {
+  if (!Array.isArray(value)) return [];
+  const result: PlanPreviewSession[] = [];
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const record = entry as Record<string, unknown>;
+    const steps = Array.isArray(record.steps)
+      ? (record.steps as ReadonlyArray<unknown>)
+      : undefined;
+    result.push({
+      day: asOptionalString(record.day),
+      date: asOptionalString(record.date),
+      sport: asOptionalString(record.sport),
+      name: asOptionalString(record.name),
+      description: asOptionalString(record.description),
+      duration_minutes: asOptionalNumber(record.duration_minutes),
+      intensity: asOptionalString(record.intensity),
+      steps,
+      notes: asOptionalString(record.notes),
+    });
+  }
+  return result;
+}
+
 
 export function renderUIComponent(
   component: UIComponent,
@@ -152,6 +180,22 @@ export function renderUIComponent(
           fields={asTextInputFields(props.fields)}
           submit_label={asOptionalString(props.submit_label)}
           on_submit={asOnSubmit(props.on_submit)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    case 'plan_preview': {
+      return (
+        <PlanPreviewCard
+          id={component.id}
+          plan_id={asString(props.plan_id, '')}
+          start_date={asOptionalString(props.start_date)}
+          focus={asOptionalString(props.focus)}
+          sessions={asPlanPreviewSessions(props.sessions)}
+          truncated_in_ui={asBoolean(props.truncated_in_ui)}
           disabled={disabled}
           resolvedText={resolvedText}
           onSubmit={onSubmit}
