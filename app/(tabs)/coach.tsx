@@ -32,6 +32,8 @@ import { AgentStatus } from '@/components/chat/AgentStatus';
 import { CheckpointCard } from '@/components/chat/CheckpointCard';
 import { QuickReplies } from '@/components/chat/QuickReplies';
 import { ActionCard } from '@/components/chat/ActionCard';
+import { ToolGroup } from '@/components/chat/ToolGroup';
+import { ShowWorkFooter } from '@/components/chat/ShowWorkFooter';
 import { renderUIComponent } from '@/components/chat/genui';
 import { log } from '@/lib/logger';
 import type {
@@ -41,6 +43,8 @@ import type {
   ChatContext,
   ChatItem,
   UIComponent,
+  ToolEvent,
+  ToolStep,
 } from '@/types/chat';
 
 const TAG = 'CoachScreen';
@@ -75,6 +79,47 @@ function makeUIItem(component: UIComponent): Extract<ChatItem, { kind: 'ui' }> {
   };
 }
 
+type ToolGroupItem = Extract<ChatItem, { kind: 'tool_group' }>;
+
+function makeToolGroupItem(groupId: string): ToolGroupItem {
+  return {
+    kind: 'tool_group',
+    id: groupId,
+    steps: [],
+    endedAt: null,
+    timestamp: new Date(),
+  };
+}
+
+/**
+ * Within a group, the previous 'running' step transitions to 'done'
+ * implicitly when the next tool_hint arrives. The newest step is added
+ * with 'running' status. Pure immutable update.
+ */
+function appendStepToGroup(
+  group: ToolGroupItem,
+  step: { toolName: string; displayLabel: string },
+): ToolGroupItem {
+  const updatedSteps: ToolStep[] = group.steps.map((s) =>
+    s.status === 'running' ? { ...s, status: 'done' as const } : s,
+  );
+  updatedSteps.push({
+    toolName: step.toolName,
+    displayLabel: step.displayLabel,
+    status: 'running',
+  });
+  return { ...group, steps: updatedSteps };
+}
+
+function finalizeGroup(group: ToolGroupItem): ToolGroupItem {
+  const finalSteps: ToolStep[] = group.steps.map((s) =>
+    s.status === 'running' || s.status === 'pending'
+      ? { ...s, status: 'done' as const }
+      : s,
+  );
+  return { ...group, steps: finalSteps, endedAt: new Date() };
+}
+
 export default function CoachScreen() {
   const user = useAuthStore((s) => s.user);
   const isOnboarded = useAuthStore((s) => s.isOnboarded);
@@ -105,6 +150,15 @@ export default function CoachScreen() {
   const [uiItems, setUiItems] = useState<
     ReadonlyArray<Extract<ChatItem, { kind: 'ui' }>>
   >([]);
+  const [activeToolGroups, setActiveToolGroups] = useState<
+    ReadonlyArray<ToolGroupItem>
+  >([]);
+  /**
+   * Groups that have ended in this session but whose steps need to attach
+   * to the next assistant message that arrives. Once attached, they are
+   * removed from this buffer.
+   */
+  const pendingFinishedGroupsRef = useRef<ToolGroupItem[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
   const autoOnboardingFired = useRef(false);
@@ -149,6 +203,80 @@ export default function CoachScreen() {
     setUiItems((prev) => [makeUIItem(component), ...prev]);
   }, []);
 
+  const handleToolGroupStart = useCallback((groupId: string) => {
+    log.info(TAG, 'Tool group start', { groupId });
+    setActiveToolGroups((prev) => {
+      if (prev.some((g) => g.id === groupId)) {
+        return prev;
+      }
+      return [makeToolGroupItem(groupId), ...prev];
+    });
+  }, []);
+
+  const handleToolEvent = useCallback((event: ToolEvent) => {
+    log.info(TAG, 'Tool event', {
+      name: event.name,
+      groupId: event.groupId,
+    });
+    setActiveToolGroups((prev) => {
+      const existing = prev.find((g) => g.id === event.groupId);
+      if (!existing) {
+        // tool_hint arrived before tool_group_start (or backend without
+        // explicit group_start). Create the group lazily.
+        const seed = makeToolGroupItem(event.groupId);
+        const seeded = appendStepToGroup(seed, {
+          toolName: event.name,
+          displayLabel: event.displayLabel,
+        });
+        return [seeded, ...prev];
+      }
+      return prev.map((g) =>
+        g.id === event.groupId
+          ? appendStepToGroup(g, {
+              toolName: event.name,
+              displayLabel: event.displayLabel,
+            })
+          : g,
+      );
+    });
+  }, []);
+
+  const handleToolGroupEnd = useCallback((groupId: string) => {
+    log.info(TAG, 'Tool group end', { groupId });
+    setActiveToolGroups((prev) => {
+      const target = prev.find((g) => g.id === groupId);
+      if (!target) {
+        return prev;
+      }
+      const finalized = finalizeGroup(target);
+      // Buffer the finalized group for attachment to the next assistant
+      // message via ShowWorkFooter.
+      pendingFinishedGroupsRef.current = [
+        ...pendingFinishedGroupsRef.current,
+        finalized,
+      ];
+      return prev.filter((g) => g.id !== groupId);
+    });
+  }, []);
+
+  /**
+   * Drain pending finished tool groups onto the given assistant message
+   * so its ShowWorkFooter can render. Returns the message (immutably
+   * updated when there are pending steps).
+   */
+  const attachPendingToolStepsToMessage = useCallback(
+    (msg: ChatMessage): ChatMessage => {
+      const pending = pendingFinishedGroupsRef.current;
+      if (pending.length === 0) {
+        return msg;
+      }
+      const allSteps: ToolStep[] = pending.flatMap((g) => g.steps);
+      pendingFinishedGroupsRef.current = [];
+      return { ...msg, toolSteps: allSteps };
+    },
+    [],
+  );
+
   const handleSend = useCallback(
     async (text: string) => {
       const userMsg: ChatMessage = {
@@ -174,7 +302,7 @@ export default function CoachScreen() {
           text,
           sessionId || 'new',
           (msg) => {
-            const assistantMsg: ChatMessage = {
+            const baseMsg: ChatMessage = {
               id: `assistant-${Date.now()}`,
               role: 'assistant',
               content: msg.content,
@@ -182,6 +310,9 @@ export default function CoachScreen() {
               toolCalls: toolsUsed.length > 0 ? [...toolsUsed] : undefined,
               synced: false,
             };
+            // Attach any finished tool groups so the ShowWorkFooter
+            // renders under this assistant bubble.
+            const assistantMsg = attachPendingToolStepsToMessage(baseMsg);
             addMessage(assistantMsg);
             setSessionId(msg.sessionId);
           },
@@ -196,6 +327,9 @@ export default function CoachScreen() {
           },
           handleActionRequest,
           handleUIComponent,
+          handleToolEvent,
+          handleToolGroupStart,
+          handleToolGroupEnd,
         );
       } catch (err) {
         log.error(TAG, 'Send error', { error: String(err) });
@@ -211,6 +345,19 @@ export default function CoachScreen() {
         setTyping(false);
         setAgentStatus('');
         setAgentTool(undefined);
+        // Drain any tool groups still marked active (e.g. backend ended
+        // without an explicit tool_group_end) so the UI doesn't leave
+        // an orphaned spinning card behind.
+        setActiveToolGroups((prev) => {
+          if (prev.length === 0) {
+            return prev;
+          }
+          pendingFinishedGroupsRef.current = [
+            ...pendingFinishedGroupsRef.current,
+            ...prev.map(finalizeGroup),
+          ];
+          return [];
+        });
       }
     },
     [
@@ -224,6 +371,10 @@ export default function CoachScreen() {
       isOnboarded,
       handleActionRequest,
       handleUIComponent,
+      handleToolEvent,
+      handleToolGroupStart,
+      handleToolGroupEnd,
+      attachPendingToolStepsToMessage,
     ],
   );
 
@@ -291,21 +442,40 @@ export default function CoachScreen() {
   );
 
   /**
-   * Build the inverted item list. Action items and GenUI items are
-   * pre-pended (newest first) so they appear at the visual bottom of the
-   * inverted FlatList. Each list keeps its own ordering by recency.
+   * Build the inverted item list. Active tool groups, action items and
+   * GenUI items are pre-pended (newest first) so they appear at the
+   * visual bottom of the inverted FlatList. Each list keeps its own
+   * ordering by recency.
    */
   const items = useMemo<ReadonlyArray<ChatItem>>(() => {
     const messageItems: ChatItem[] = messages.map((m) => ({
       kind: 'message',
       message: m,
     }));
-    const merged: ChatItem[] = [...uiItems, ...actionItems, ...messageItems];
+    const merged: ChatItem[] = [
+      ...activeToolGroups,
+      ...uiItems,
+      ...actionItems,
+      ...messageItems,
+    ];
     return merged;
-  }, [messages, actionItems, uiItems]);
+  }, [messages, actionItems, uiItems, activeToolGroups]);
 
   const renderItem = useCallback(
     ({ item }: { item: ChatItem }) => {
+      if (item.kind === 'tool_group') {
+        // Active groups stay expanded; once `endedAt` is set the card
+        // becomes collapsible (the component itself manages local
+        // expand/collapse state when uncontrolled).
+        return (
+          <ToolGroup
+            groupId={item.id}
+            steps={item.steps}
+            collapsed={item.endedAt !== null ? true : false}
+          />
+        );
+      }
+
       if (item.kind === 'ui') {
         const isActive = !item.resolved && item.id === activeUIComponentId;
         return (
@@ -336,6 +506,13 @@ export default function CoachScreen() {
       }
 
       const message = item.message;
+      const footer =
+        message.role === 'assistant' &&
+        message.toolSteps &&
+        message.toolSteps.length > 0 ? (
+          <ShowWorkFooter steps={message.toolSteps} />
+        ) : null;
+
       if (
         message.checkpointId &&
         pendingCheckpoint &&
@@ -344,11 +521,21 @@ export default function CoachScreen() {
         return (
           <View>
             <ChatBubble message={message} />
+            {footer}
             <CheckpointCard
               checkpoint={pendingCheckpoint}
               onConfirm={handleCheckpointConfirm}
               isConfirming={isConfirming}
             />
+          </View>
+        );
+      }
+
+      if (footer) {
+        return (
+          <View>
+            <ChatBubble message={message} />
+            {footer}
           </View>
         );
       }
@@ -371,11 +558,26 @@ export default function CoachScreen() {
     if (item.kind === 'ui') {
       return `ui-${item.id}`;
     }
+    if (item.kind === 'tool_group') {
+      return `toolgroup-${item.id}`;
+    }
     return item.id;
   }, []);
 
   const showFreshSessionPlaceholder =
-    messages.length === 0 && actionItems.length === 0 && uiItems.length === 0;
+    messages.length === 0 &&
+    actionItems.length === 0 &&
+    uiItems.length === 0 &&
+    activeToolGroups.length === 0;
+
+  /**
+   * Decision on the legacy AgentStatus chip: keep it for the
+   * "Denke nach..." thinking-only phase, hide it whenever a tool group
+   * card is on screen so we don't double up the status surface. The
+   * checklist already conveys the active step richer than the chip.
+   */
+  const hasActiveToolGroup = activeToolGroups.length > 0;
+  const showAgentStatus = (isTyping || isStreaming) && !hasActiveToolGroup;
 
   return (
     <View className="flex-1 bg-background">
@@ -418,7 +620,7 @@ export default function CoachScreen() {
         )}
 
         <AgentStatus
-          isActive={isTyping || isStreaming}
+          isActive={showAgentStatus}
           status={agentStatus}
           tool={agentTool}
         />
