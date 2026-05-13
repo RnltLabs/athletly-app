@@ -5,3 +5,5 @@ export { CheckpointCard } from './CheckpointCard';
 export { QuickReplies } from './QuickReplies';
 export { ActionCard } from './ActionCard';
 export { PreSignupChat } from './PreSignupChat';
+export { ToolGroup } from './ToolGroup';
+export { ShowWorkFooter } from './ShowWorkFooter';
