@@ -31,7 +31,6 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { AgentStatus } from '@/components/chat/AgentStatus';
 import { CheckpointCard } from '@/components/chat/CheckpointCard';
 import { QuickReplies } from '@/components/chat/QuickReplies';
-import { GarminConnectActionCard } from '@/components/chat/GarminConnectActionCard';
 import { ActionCard } from '@/components/chat/ActionCard';
 import { renderUIComponent } from '@/components/chat/genui';
 import { log } from '@/lib/logger';
@@ -322,15 +321,10 @@ export default function CoachScreen() {
       }
 
       if (item.kind === 'action') {
-        if (item.actionType === 'garmin_connect') {
-          return (
-            <GarminConnectActionCard
-              label={item.label || 'Garmin verbinden'}
-            />
-          );
-        }
-        // Unknown action types render a generic disabled card so the
-        // user at least sees something rather than a silent drop.
+        // The backend now emits `ui_component` for garmin_connect /
+        // signup, so this branch is forward-compat only: any unknown
+        // action_request still surfaces a generic disabled card rather
+        // than silently dropping.
         return (
           <ActionCard
             label={item.label || 'Aktion'}
