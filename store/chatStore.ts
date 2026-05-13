@@ -165,7 +165,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         const welcomeMessage: ChatMessage = {
           id: 'welcome',
           role: 'assistant',
-          content: 'Hey! Frag mich alles rund um dein Training.',
+          content: 'Du kannst jetzt loslegen - erzahl mir worauf du dich vorbereiten willst.',
           timestamp: new Date(),
           synced: false,
         };
