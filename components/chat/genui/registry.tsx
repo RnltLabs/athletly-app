@@ -1,0 +1,116 @@
+/**
+ * GenUI Registry - Athletly V2
+ *
+ * Switches on the SSE `ui_component` payload's `type` discriminator and
+ * renders the matching inline component. Returns null for unknown types
+ * so the chat stays usable when the backend ships a new component the
+ * client hasn't been updated to render yet.
+ *
+ * Contract is intentionally tiny: (component, onSubmit, disabled) ->
+ * ReactNode. Components themselves own their internal state.
+ */
+
+import React from 'react';
+import type { UIComponent } from './types';
+import { ChoiceCard } from './ChoiceCard';
+import { NumberStepper } from './NumberStepper';
+import { DatePickerCard } from './DatePickerCard';
+import { ConfirmCard } from './ConfirmCard';
+
+function asString(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
+
+function asStringArray(value: unknown): ReadonlyArray<string> {
+  if (!Array.isArray(value)) return [];
+  return value.filter((v): v is string => typeof v === 'string');
+}
+
+function asNumber(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function asOptionalNumber(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+export function renderUIComponent(
+  component: UIComponent,
+  onSubmit: (response: string) => void,
+  disabled: boolean,
+  resolvedText?: string,
+): React.ReactNode {
+  const { type, props } = component;
+
+  switch (type) {
+    case 'choice_single':
+    case 'choice_multi': {
+      const mode = type === 'choice_single' ? 'single' : 'multi';
+      return (
+        <ChoiceCard
+          question={asString(props.question, '')}
+          options={asStringArray(props.options)}
+          mode={mode}
+          submitLabel={asOptionalString(props.submit_label)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    case 'number_stepper': {
+      const min = asNumber(props.min, 0);
+      const max = asNumber(props.max, 100);
+      return (
+        <NumberStepper
+          question={asString(props.question, '')}
+          min={min}
+          max={max}
+          step={asOptionalNumber(props.step)}
+          initial={asOptionalNumber(props.initial)}
+          unit={asOptionalString(props.unit)}
+          submitLabel={asOptionalString(props.submit_label)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    case 'date_picker': {
+      return (
+        <DatePickerCard
+          question={asString(props.question, '')}
+          minDate={asOptionalString(props.min_date)}
+          maxDate={asOptionalString(props.max_date)}
+          initialDate={asOptionalString(props.initial_date)}
+          submitLabel={asOptionalString(props.submit_label)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    case 'confirm': {
+      return (
+        <ConfirmCard
+          question={asString(props.question, '')}
+          confirmLabel={asOptionalString(props.confirm_label)}
+          cancelLabel={asOptionalString(props.cancel_label)}
+          disabled={disabled}
+          resolvedText={resolvedText}
+          onSubmit={onSubmit}
+        />
+      );
+    }
+
+    default:
+      return null;
+  }
+}
