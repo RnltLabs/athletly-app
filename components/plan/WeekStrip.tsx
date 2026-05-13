@@ -30,14 +30,21 @@ interface WeekStripProps {
   onSelectDate: (date: string) => void;
 }
 
+function toLocalISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getDateForDay(weekStart: string, dayIndex: number): string {
-  const d = new Date(weekStart);
+  const d = new Date(weekStart + 'T12:00:00');
   d.setDate(d.getDate() + dayIndex);
-  return d.toISOString().split('T')[0];
+  return toLocalISO(d);
 }
 
 function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalISO(new Date());
 }
 
 function getDayPlanForDate(days: readonly DayPlan[], date: string): DayPlan | undefined {

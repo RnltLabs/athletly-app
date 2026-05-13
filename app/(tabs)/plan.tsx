@@ -39,16 +39,23 @@ const GERMAN_DAYS = [
   'Donnerstag', 'Freitag', 'Samstag',
 ] as const;
 
+function toLocalISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getMondayForOffset(weekOffset: number): string {
   const d = new Date();
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
   const monday = new Date(d.getFullYear(), d.getMonth(), diff + weekOffset * 7);
-  return monday.toISOString().split('T')[0];
+  return toLocalISO(monday);
 }
 
 function getCalendarWeek(dateISO: string): number {
-  const d = new Date(dateISO);
+  const d = new Date(dateISO + 'T12:00:00');
   d.setHours(0, 0, 0, 0);
   d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
   const week1 = new Date(d.getFullYear(), 0, 4);
@@ -56,8 +63,8 @@ function getCalendarWeek(dateISO: string): number {
 }
 
 function formatWeekRange(mondayISO: string): string {
-  const monday = new Date(mondayISO);
-  const sunday = new Date(mondayISO);
+  const monday = new Date(mondayISO + 'T12:00:00');
+  const sunday = new Date(mondayISO + 'T12:00:00');
   sunday.setDate(sunday.getDate() + 6);
   const startDay = monday.getDate();
   const endDay = sunday.getDate();
@@ -70,7 +77,7 @@ function formatWeekRange(mondayISO: string): string {
 }
 
 function formatDayHeader(dateISO: string): string {
-  const d = new Date(dateISO);
+  const d = new Date(dateISO + 'T12:00:00');
   const dayName = GERMAN_DAYS[d.getDay()];
   const dayNum = d.getDate();
   const month = GERMAN_MONTHS[d.getMonth()];
@@ -78,7 +85,7 @@ function formatDayHeader(dateISO: string): string {
 }
 
 function getTodayISO(): string {
-  return new Date().toISOString().split('T')[0];
+  return toLocalISO(new Date());
 }
 
 // --- Loading Skeleton ---
