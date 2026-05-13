@@ -1,23 +1,48 @@
 /**
  * SignupModal - Athletly V2
  *
- * Modal for in-chat account creation. Calls Supabase signUp directly.
- * The auth store picks up the new session via onAuthStateChange, so the
- * caller just needs to close the modal on success.
+ * Modal for in-chat authentication. Supports both signup (default) and login.
+ * Caller passes the initial mode; user can toggle inside the modal.
+ *
+ * Style note: NativeWind's wrapped Pressable does not reliably honour the
+ * function-form of the `style` prop, so we use plain object styles.
  */
 
-import React, { useState } from 'react';
-import { View, Text, Modal, Pressable, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  Modal,
+  Pressable,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { X, Mail, Lock } from 'lucide-react-native';
 import { Input } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/lib/colors';
 import { log } from '@/lib/logger';
 
+const TAG = 'SignupModal';
+
+type AuthMode = 'signup' | 'login';
+
+interface SignupModalProps {
+  visible: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  initialMode?: AuthMode;
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
 const SUBMIT_BUTTON_STYLE = {
   backgroundColor: Colors.primary,
   borderRadius: 12,
   height: 52,
+  width: '100%' as const,
   alignItems: 'center' as const,
   justifyContent: 'center' as const,
   paddingHorizontal: 20,
@@ -26,25 +51,56 @@ const SUBMIT_BUTTON_STYLE = {
   shadowOpacity: 0.25,
   shadowRadius: 10,
   elevation: 4,
+} as const;
+
+const TOGGLE_LINK_STYLE = {
+  marginTop: 14,
+  alignItems: 'center' as const,
 };
 
-const TAG = 'SignupModal';
+const MODE_COPY: Record<AuthMode, {
+  title: string;
+  cta: string;
+  toggle: string;
+  toggleAction: string;
+}> = {
+  signup: {
+    title: 'Account erstellen',
+    cta: 'Account erstellen',
+    toggle: 'Schon einen Account?',
+    toggleAction: 'Anmelden',
+  },
+  login: {
+    title: 'Anmelden',
+    cta: 'Anmelden',
+    toggle: 'Noch keinen Account?',
+    toggleAction: 'Registrieren',
+  },
+};
 
-interface SignupModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-}
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
-
-export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
+export function SignupModal({
+  visible,
+  onClose,
+  onSuccess,
+  initialMode = 'signup',
+}: SignupModalProps) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Re-sync mode when the modal is reopened with a different initialMode.
+  useEffect(() => {
+    if (visible) {
+      setMode(initialMode);
+      setError(null);
+      setInfo(null);
+    }
+  }, [visible, initialMode]);
+
+  const copy = MODE_COPY[mode];
 
   const resetState = () => {
     setEmail('');
@@ -58,15 +114,25 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
     onClose();
   };
 
-  const handleSignup = async () => {
+  const handleToggleMode = () => {
+    setMode((prev) => (prev === 'signup' ? 'login' : 'signup'));
+    setError(null);
+    setInfo(null);
+  };
+
+  const handleSubmit = async () => {
     const trimmedEmail = email.trim();
 
     if (!EMAIL_REGEX.test(trimmedEmail)) {
       setError('Bitte gib eine gultige E-Mail-Adresse ein.');
       return;
     }
-    if (password.length < MIN_PASSWORD_LENGTH) {
+    if (mode === 'signup' && password.length < MIN_PASSWORD_LENGTH) {
       setError(`Passwort muss mindestens ${MIN_PASSWORD_LENGTH} Zeichen haben.`);
+      return;
+    }
+    if (mode === 'login' && password.length === 0) {
+      setError('Bitte gib dein Passwort ein.');
       return;
     }
 
@@ -75,30 +141,52 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
     setIsLoading(true);
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      if (mode === 'signup') {
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: trimmedEmail,
+          password,
+        });
+
+        if (signUpError) {
+          log.warn(TAG, 'Signup error', { message: signUpError.message });
+          setError(signUpError.message);
+          return;
+        }
+
+        if (data.session) {
+          log.info(TAG, 'Signup success, session active');
+          resetState();
+          onSuccess();
+          return;
+        }
+
+        log.info(TAG, 'Signup success, awaiting email confirmation');
+        setInfo(
+          'Wir haben dir eine Bestatigungs-Mail geschickt. Klicke den Link, dann komm zuruck.',
+        );
+        return;
+      }
+
+      // mode === 'login'
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email: trimmedEmail,
         password,
       });
 
-      if (signUpError) {
-        log.warn(TAG, 'Signup error', { message: signUpError.message });
-        setError(signUpError.message);
+      if (signInError) {
+        log.warn(TAG, 'Login error', { message: signInError.message });
+        setError(signInError.message);
         return;
       }
 
       if (data.session) {
-        log.info(TAG, 'Signup success, session active');
+        log.info(TAG, 'Login success');
         resetState();
         onSuccess();
-        return;
       }
-
-      // Email confirmation required - defensive fallback
-      log.info(TAG, 'Signup success, awaiting email confirmation');
-      setInfo('Wir haben dir eine Bestatigungs-Mail geschickt. Klicke den Link, dann komm zuruck.');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Signup fehlgeschlagen.';
-      log.error(TAG, 'Signup exception', { error: String(err) });
+      const message = err instanceof Error ? err.message : 'Ein Fehler ist aufgetreten.';
+      log.error(TAG, 'Auth exception', { error: String(err) });
       setError(message);
     } finally {
       setIsLoading(false);
@@ -117,16 +205,11 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
         style={{ backgroundColor: Colors.overlay }}
         onPress={handleClose}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <Pressable
-            className="bg-white rounded-2xl p-6 mx-6 w-80"
-            onPress={() => {}}
-          >
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Pressable className="bg-white rounded-2xl p-6 mx-6 w-80" onPress={() => {}}>
             <View className="flex-row items-center justify-between mb-5">
               <Text className="text-text-primary text-lg font-semibold">
-                Account erstellen
+                {copy.title}
               </Text>
               <Pressable
                 onPress={handleClose}
@@ -154,7 +237,11 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
                 label="Passwort"
                 leftIcon={Lock}
                 isPassword
-                placeholder={`Mindestens ${MIN_PASSWORD_LENGTH} Zeichen`}
+                placeholder={
+                  mode === 'signup'
+                    ? `Mindestens ${MIN_PASSWORD_LENGTH} Zeichen`
+                    : 'Dein Passwort'
+                }
                 value={password}
                 onChangeText={setPassword}
                 editable={!isLoading}
@@ -174,7 +261,7 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
             )}
 
             <Pressable
-              onPress={handleSignup}
+              onPress={handleSubmit}
               disabled={isLoading}
               style={
                 isLoading
@@ -183,16 +270,31 @@ export function SignupModal({ visible, onClose, onSuccess }: SignupModalProps) {
               }
               android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
               accessibilityRole="button"
-              accessibilityLabel="Account erstellen"
+              accessibilityLabel={copy.cta}
               accessibilityState={{ disabled: isLoading }}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                  Account erstellen
+                  {copy.cta}
                 </Text>
               )}
+            </Pressable>
+
+            <Pressable
+              onPress={handleToggleMode}
+              disabled={isLoading}
+              style={TOGGLE_LINK_STYLE}
+              accessibilityRole="button"
+              accessibilityLabel={copy.toggleAction}
+            >
+              <Text style={{ color: Colors.textSecondary, fontSize: 14 }}>
+                {copy.toggle}{' '}
+                <Text style={{ color: Colors.primary, fontWeight: '600' }}>
+                  {copy.toggleAction}
+                </Text>
+              </Text>
             </Pressable>
           </Pressable>
         </KeyboardAvoidingView>
