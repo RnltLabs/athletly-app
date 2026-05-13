@@ -22,10 +22,12 @@ import {
   Lock,
   LogOut,
   Trash2,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useHealthStore } from '@/store/healthStore';
+import { useChatStore } from '@/store/chatStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppleHealth } from '@/hooks/useAppleHealth';
 import { useHealthConnect } from '@/hooks/useHealthConnect';
@@ -247,6 +249,41 @@ export default function ProfileScreen() {
   }, [healthConnect, user?.id, fetchConnectedServices]);
 
   /**
+   * Reset everything user-owned: profile, journal, plans, activities,
+   * provider_tokens, sessions, chat messages. Auth user stays signed in.
+   * After success the chat is empty and the agent restarts onboarding.
+   */
+  const handleResetProfile = useCallback(() => {
+    Alert.alert(
+      'Daten zurueck setzen',
+      'Alle Trainingsdaten, Plaene, Chat-Verlauf und Verbindungen werden geloescht. Du bleibst eingeloggt und startest mit einem leeren Profil. Fortfahren?',
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Alles loeschen',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiPost('/profile/reset');
+              useChatStore.getState().clearMessages();
+              useAuthStore.getState().setOnboarded(false);
+              await fetchConnectedServices();
+              router.replace('/(tabs)/coach');
+              Alert.alert('Erledigt', 'Dein Profil wurde zurueckgesetzt.');
+            } catch (err) {
+              log.error(TAG, 'Reset failed', { error: String(err) });
+              Alert.alert(
+                'Fehler',
+                'Reset fehlgeschlagen. Bitte spaeter erneut versuchen.',
+              );
+            }
+          },
+        },
+      ],
+    );
+  }, [router, fetchConnectedServices]);
+
+  /**
    * Logout with confirmation dialog.
    */
   const handleLogout = useCallback(() => {
@@ -383,6 +420,12 @@ export default function ProfileScreen() {
             icon={Lock}
             label="Passwort aendern"
             onPress={() => {}}
+          />
+          <SettingsRow
+            icon={RotateCcw}
+            label="Daten zuruecksetzen"
+            onPress={handleResetProfile}
+            isDestructive
           />
           <SettingsRow
             icon={LogOut}
