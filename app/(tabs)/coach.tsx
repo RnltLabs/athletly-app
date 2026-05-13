@@ -1,18 +1,17 @@
 /**
- * Coach Chat Screen — Athletly V2
+ * Coach Chat Screen - Athletly V2 (chat-first)
  *
- * Primary interaction surface. User talks to AI coach,
- * receives plans, analysis, and recommendations.
+ * Primary interaction surface. The agent drives both onboarding and
+ * regular coaching here. Action requests from the backend surface as
+ * inline cards in the chat history.
  *
- * Design spec section 7.3:
  * - Inverted FlatList (newest at bottom)
  * - Agent status indicator (thinking/tool calls)
- * - Quick replies after certain messages
- * - Chat input bar at bottom with voice support
  * - Checkpoint cards inline for plan approval
+ * - Action cards inline for agent-proposed actions (e.g. garmin_connect)
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -32,8 +31,16 @@ import { ChatInput } from '@/components/chat/ChatInput';
 import { AgentStatus } from '@/components/chat/AgentStatus';
 import { CheckpointCard } from '@/components/chat/CheckpointCard';
 import { QuickReplies } from '@/components/chat/QuickReplies';
+import { GarminConnectActionCard } from '@/components/chat/GarminConnectActionCard';
+import { ActionCard } from '@/components/chat/ActionCard';
 import { log } from '@/lib/logger';
-import type { ChatMessage, StreamProgress } from '@/types/chat';
+import type {
+  ChatMessage,
+  StreamProgress,
+  ActionRequest,
+  ChatContext,
+  ChatItem,
+} from '@/types/chat';
 
 const TAG = 'CoachScreen';
 
@@ -43,8 +50,23 @@ const WELCOME_REPLIES = [
   'Wie geht es meiner Erholung?',
 ];
 
+const FRESH_SESSION_PLACEHOLDER =
+  'Du kannst jetzt loslegen - erzahl mir worauf du dich vorbereiten willst.';
+
+function makeActionItem(action: ActionRequest): Extract<ChatItem, { kind: 'action' }> {
+  return {
+    kind: 'action',
+    id: `action-${action.type}-${Date.now()}`,
+    actionType: action.type,
+    label: action.label,
+    payload: action.payload,
+    timestamp: new Date(),
+  };
+}
+
 export default function CoachScreen() {
   const user = useAuthStore((s) => s.user);
+  const isOnboarded = useAuthStore((s) => s.isOnboarded);
   const {
     messages,
     sessionId,
@@ -59,13 +81,16 @@ export default function CoachScreen() {
     loadMessages,
   } = useChatStore();
 
-  const { sendMessage, isStreaming, progress, toolsUsed } = useChatStream();
+  const { sendMessage, isStreaming, toolsUsed } = useChatStream();
   const voice = useVoiceInput();
 
   const { prefill } = useLocalSearchParams<{ prefill?: string }>();
   const [agentStatus, setAgentStatus] = useState('');
   const [agentTool, setAgentTool] = useState<string | undefined>(undefined);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
+  const [actionItems, setActionItems] = useState<
+    ReadonlyArray<Extract<ChatItem, { kind: 'action' }>>
+  >([]);
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
 
@@ -82,23 +107,27 @@ export default function CoachScreen() {
     }
   }, [user?.id, loadMessages]);
 
-  // Reload messages when app returns from background (e.g. after push notification)
+  // Reload messages when app returns from background
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active' && user?.id && !isStreaming) {
-        log.info(TAG, 'App became active — reloading messages');
+        log.info(TAG, 'App became active - reloading messages');
         loadMessages(user.id);
       }
     });
     return () => subscription.remove();
   }, [user?.id, isStreaming, loadMessages]);
 
-  // Show welcome quick replies when only welcome message present
   useEffect(() => {
     if (messages.length === 1 && messages[0]?.id === 'welcome') {
       setQuickReplies(WELCOME_REPLIES);
     }
   }, [messages]);
+
+  const handleActionRequest = useCallback((action: ActionRequest) => {
+    log.info(TAG, 'Action request received', { type: action.type });
+    setActionItems((prev) => [makeActionItem(action), ...prev]);
+  }, []);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -115,6 +144,10 @@ export default function CoachScreen() {
       setQuickReplies([]);
       setAgentStatus('Denke nach...');
       setAgentTool(undefined);
+
+      // First message of a fresh / not-yet-onboarded user runs the
+      // onboarding skill on the backend.
+      const context: ChatContext = !isOnboarded ? 'onboarding' : 'coach';
 
       try {
         await sendMessage(
@@ -136,11 +169,12 @@ export default function CoachScreen() {
             setAgentStatus(prog.status);
             setAgentTool(prog.tool);
           },
-          'coach',
+          context,
           undefined,
           (cp) => {
             setPendingCheckpoint(cp);
           },
+          handleActionRequest,
         );
       } catch (err) {
         log.error(TAG, 'Send error', { error: String(err) });
@@ -158,10 +192,19 @@ export default function CoachScreen() {
         setAgentTool(undefined);
       }
     },
-    [sessionId, sendMessage, addMessage, setSessionId, setTyping, setPendingCheckpoint, toolsUsed],
+    [
+      sessionId,
+      sendMessage,
+      addMessage,
+      setSessionId,
+      setTyping,
+      setPendingCheckpoint,
+      toolsUsed,
+      isOnboarded,
+      handleActionRequest,
+    ],
   );
 
-  // Auto-send prefilled message from Quick Actions
   useEffect(() => {
     if (prefill && !prefillHandled.current) {
       prefillHandled.current = true;
@@ -184,16 +227,50 @@ export default function CoachScreen() {
     [confirmCheckpoint],
   );
 
-  const renderMessage = useCallback(
-    ({ item }: { item: ChatMessage }) => {
+  /**
+   * Build the inverted item list. We merge action items with messages by
+   * timestamp so that fresh action requests appear at the visual bottom.
+   */
+  const items = useMemo<ReadonlyArray<ChatItem>>(() => {
+    const messageItems: ChatItem[] = messages.map((m) => ({
+      kind: 'message',
+      message: m,
+    }));
+    const merged: ChatItem[] = [...actionItems, ...messageItems];
+    return merged;
+  }, [messages, actionItems]);
+
+  const renderItem = useCallback(
+    ({ item }: { item: ChatItem }) => {
+      if (item.kind === 'action') {
+        if (item.actionType === 'garmin_connect') {
+          return (
+            <GarminConnectActionCard
+              label={item.label || 'Garmin verbinden'}
+            />
+          );
+        }
+        // Unknown action types render a generic disabled card so the
+        // user at least sees something rather than a silent drop.
+        return (
+          <ActionCard
+            label={item.label || 'Aktion'}
+            onPress={() => {}}
+            disabled
+            variant="subtle"
+          />
+        );
+      }
+
+      const message = item.message;
       if (
-        item.checkpointId &&
+        message.checkpointId &&
         pendingCheckpoint &&
-        pendingCheckpoint.id === item.checkpointId
+        pendingCheckpoint.id === message.checkpointId
       ) {
         return (
           <View>
-            <ChatBubble message={item} />
+            <ChatBubble message={message} />
             <CheckpointCard
               checkpoint={pendingCheckpoint}
               onConfirm={handleCheckpointConfirm}
@@ -203,12 +280,19 @@ export default function CoachScreen() {
         );
       }
 
-      return <ChatBubble message={item} />;
+      return <ChatBubble message={message} />;
     },
     [pendingCheckpoint, isConfirming, handleCheckpointConfirm],
   );
 
-  const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
+  const keyExtractor = useCallback((item: ChatItem) => {
+    if (item.kind === 'message') {
+      return item.message.id;
+    }
+    return item.id;
+  }, []);
+
+  const showFreshSessionPlaceholder = messages.length === 0 && actionItems.length === 0;
 
   return (
     <View className="flex-1 bg-background">
@@ -226,33 +310,36 @@ export default function CoachScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={0}
       >
+        {showFreshSessionPlaceholder ? (
+          <View className="flex-1 items-center justify-center px-8">
+            <Text className="text-text-secondary text-base text-center leading-6">
+              {FRESH_SESSION_PLACEHOLDER}
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={items as ChatItem[]}
+            renderItem={renderItem}
+            keyExtractor={keyExtractor}
+            inverted
+            contentContainerClassName="px-4 py-2"
+            keyboardDismissMode="interactive"
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
-        {/* Message list (inverted) */}
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={keyExtractor}
-          inverted
-          contentContainerClassName="px-4 py-2"
-          keyboardDismissMode="interactive"
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        />
-
-        {/* Quick replies */}
         {quickReplies.length > 0 && !isTyping && (
           <QuickReplies replies={quickReplies} onSelect={handleQuickReply} />
         )}
 
-        {/* Agent status */}
         <AgentStatus
           isActive={isTyping || isStreaming}
           status={agentStatus}
           tool={agentTool}
         />
 
-        {/* Input bar */}
         <ChatInput
           onSend={handleSend}
           onVoiceStart={voice.startListening}

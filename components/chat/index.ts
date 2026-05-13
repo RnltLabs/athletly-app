@@ -6,3 +6,4 @@ export { QuickReplies } from './QuickReplies';
 export { ActionCard } from './ActionCard';
 export { SignupModal } from './SignupModal';
 export { GarminConnectActionCard } from './GarminConnectActionCard';
+export { PreSignupChat } from './PreSignupChat';

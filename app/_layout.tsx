@@ -1,87 +1,45 @@
 /**
- * Root Layout — Athletly V2
+ * Root Layout - Athletly V2 (chat-first)
  *
- * Entry point for the app. Handles:
- * - NativeWind global CSS import
- * - Auth state initialization
- * - Route guarding (auth → onboarding → tabs)
- * - Global providers (SafeArea, Toast, StatusBar)
+ * Entry point for the app. The chat is the only top-level surface.
+ *
+ * - Pre-signup: render PreSignupChat full-screen (no tabs, no Stack).
+ * - Post-signup: render the Stack -> tabs as usual.
+ *
+ * Auth and onboarding both happen inside the chat via inline action cards.
  */
 
 import '../global.css';
 import { useEffect, useRef } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
 import { ToastProvider } from '@/components/ui/Toast';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PreSignupChat } from '@/components/chat/PreSignupChat';
 import { Colors } from '@/lib/colors';
 import { log } from '@/lib/logger';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 const TAG = 'RootLayout';
 
-/**
- * Auth guard — redirects to the correct route group based on auth state.
- * Runs whenever session, onboarding status, or current segment changes.
- */
-function useAuthGuard() {
-  const { session, isOnboarded, isInitialized } = useAuthStore();
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isInitialized) {
-      log.debug(TAG, 'AuthGuard: waiting for initialization...');
-      return;
-    }
-
-    const inAuthGroup = segments[0] === '(auth)';
-    const inOnboardingGroup = segments[0] === '(onboarding)';
-
-    log.info(TAG, 'AuthGuard evaluating', {
-      hasSession: !!session,
-      isOnboarded,
-      currentSegment: segments[0],
-      inAuthGroup,
-      inOnboardingGroup,
-    });
-
-    if (!session) {
-      // Not logged in → welcome screen handles the fork (new flow / existing account)
-      if (!inOnboardingGroup) {
-        log.info(TAG, 'AuthGuard → redirect to /(onboarding)');
-        router.replace('/(onboarding)');
-      }
-    } else {
-      // Logged in → go to tabs regardless of onboarding status
-      // (agent re-triggers plan creation in background if needed)
-      if (inAuthGroup || inOnboardingGroup) {
-        log.info(TAG, 'AuthGuard → redirect to /(tabs)');
-        router.replace('/(tabs)');
-      }
-    }
-  }, [session, isOnboarded, isInitialized, segments, router]);
-}
-
 function LoadingScreen() {
   const mountTime = useRef(Date.now());
 
   useEffect(() => {
-    log.info(TAG, '⏳ LoadingScreen mounted');
+    log.info(TAG, 'LoadingScreen mounted');
 
-    // Warn if loading takes too long
     const warnTimer = setTimeout(() => {
       const elapsed = Date.now() - mountTime.current;
-      log.warn(TAG, `⚠️ LoadingScreen still visible after ${elapsed}ms! Auth may be stuck.`);
+      log.warn(TAG, `LoadingScreen still visible after ${elapsed}ms`);
       log.warn(TAG, 'AuthStore state:', useAuthStore.getState());
     }, 5000);
 
     const criticalTimer = setTimeout(() => {
       const elapsed = Date.now() - mountTime.current;
-      log.error(TAG, `🚨 LoadingScreen stuck for ${elapsed}ms! Dumping full state.`);
+      log.error(TAG, `LoadingScreen stuck for ${elapsed}ms`);
       const state = useAuthStore.getState();
       log.error(TAG, 'Full AuthStore state', {
         isInitialized: state.isInitialized,
@@ -116,12 +74,12 @@ function LoadingScreen() {
 }
 
 export default function RootLayout() {
-  const { isInitialized, initialize } = useAuthStore();
+  const { session, isInitialized, initialize } = useAuthStore();
 
-  log.debug(TAG, `render() — isInitialized: ${isInitialized}`);
+  log.debug(TAG, `render() - isInitialized: ${isInitialized}, hasSession: ${!!session}`);
 
   useEffect(() => {
-    log.info(TAG, '🚀 RootLayout mounted, calling initialize()');
+    log.info(TAG, 'RootLayout mounted, calling initialize()');
     const subscription = initialize();
     return () => {
       log.info(TAG, 'RootLayout unmounting, cleaning up subscription');
@@ -129,7 +87,6 @@ export default function RootLayout() {
     };
   }, [initialize]);
 
-  useAuthGuard();
   usePushNotifications();
 
   if (!isInitialized) {
@@ -141,7 +98,21 @@ export default function RootLayout() {
     );
   }
 
-  log.info(TAG, '✅ Rendering main app (initialized)');
+  if (!session) {
+    log.info(TAG, 'Rendering pre-signup chat (no session)');
+    return (
+      <SafeAreaProvider>
+        <ToastProvider>
+          <ErrorBoundary>
+            <PreSignupChat />
+          </ErrorBoundary>
+          <StatusBar style="dark" />
+        </ToastProvider>
+      </SafeAreaProvider>
+    );
+  }
+
+  log.info(TAG, 'Rendering main app stack (authenticated)');
 
   return (
     <SafeAreaProvider>
