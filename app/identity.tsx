@@ -22,9 +22,14 @@ import { Skeleton } from '@/components/ui';
 import {
   IdentityHeaderCard,
   StructuredProfileCard,
-  IdentitySectionCard,
+  SmartSectionCard,
+  GoalHeroCard,
+  TrainingMetricsCard,
 } from '@/components/identity';
-import type { IdentitySection } from '@/types/identity';
+import type {
+  IdentitySection,
+  IdentityStructured,
+} from '@/types/identity';
 
 const TAG = 'IdentityScreen';
 
@@ -126,9 +131,10 @@ export default function IdentityScreen() {
             />
 
             {currentIdentity.sections.map((section) => (
-              <IdentitySectionCard
+              <SectionCard
                 key={section.key}
                 section={section}
+                structured={currentIdentity.structured}
                 onEditPress={handleSectionEdit}
               />
             ))}
@@ -142,6 +148,34 @@ export default function IdentityScreen() {
       </ScrollView>
     </View>
   );
+}
+
+interface SectionCardProps {
+  readonly section: IdentitySection;
+  readonly structured: IdentityStructured;
+  readonly onEditPress: (section: IdentitySection) => void;
+}
+
+function SectionCard({ section, structured, onEditPress }: SectionCardProps) {
+  if (section.key === 'current_goal') {
+    return (
+      <GoalHeroCard
+        section={section}
+        structured={structured}
+        onEditPress={onEditPress}
+      />
+    );
+  }
+  if (section.key === 'training') {
+    return (
+      <TrainingMetricsCard
+        section={section}
+        structured={structured}
+        onEditPress={onEditPress}
+      />
+    );
+  }
+  return <SmartSectionCard section={section} onEditPress={onEditPress} />;
 }
 
 function LoadingState() {
