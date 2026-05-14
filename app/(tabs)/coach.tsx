@@ -140,7 +140,10 @@ export default function CoachScreen() {
   const { sendMessage, isStreaming, toolsUsed } = useChatStream();
   const voice = useVoiceInput();
 
-  const { prefill } = useLocalSearchParams<{ prefill?: string }>();
+  const { prefill, draft } = useLocalSearchParams<{
+    prefill?: string;
+    draft?: string;
+  }>();
   const [agentStatus, setAgentStatus] = useState('');
   const [agentTool, setAgentTool] = useState<string | undefined>(undefined);
   const [quickReplies, setQuickReplies] = useState<string[]>([]);
@@ -162,6 +165,15 @@ export default function CoachScreen() {
   const flatListRef = useRef<FlatList>(null);
   const prefillHandled = useRef(false);
   const autoOnboardingFired = useRef(false);
+  /**
+   * `draft` is the non-auto-sending counterpart to `prefill`. It seeds
+   * the chat input with editable text (used by the "Im Chat anpassen"
+   * buttons on the identity screen) but never triggers a send. We expose
+   * it to the ChatInput only on the first render after it changes so
+   * a stale URL param can't overwrite what the user is typing.
+   */
+  const draftHandled = useRef(false);
+  const [activeDraft, setActiveDraft] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     log.info(TAG, 'Screen mounted', { userId: user?.id?.slice(0, 8) });
@@ -384,6 +396,17 @@ export default function CoachScreen() {
       handleSend(prefill);
     }
   }, [prefill, handleSend]);
+
+  // Forward a fresh `draft` value into the input exactly once per
+  // navigation so the user lands in chat with editable text but no
+  // auto-send.
+  useEffect(() => {
+    if (typeof draft === 'string' && draft.length > 0 && !draftHandled.current) {
+      draftHandled.current = true;
+      setActiveDraft(draft);
+      log.info(TAG, 'Draft received', { length: draft.length });
+    }
+  }, [draft]);
 
   // First-time onboarding auto-trigger: when a fresh user with no real chat
   // history lands here, kick off the agent's onboarding greeting automatically
@@ -632,6 +655,7 @@ export default function CoachScreen() {
           isListening={voice.isListening}
           voiceTranscript={voice.transcript}
           disabled={isStreaming}
+          draft={activeDraft}
         />
       </KeyboardAvoidingView>
     </View>

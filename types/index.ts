@@ -36,3 +36,11 @@ export type {
 export type {
   ProductRecommendation,
 } from './product';
+
+export type {
+  IdentityResponse,
+  IdentitySection,
+  IdentityStructured,
+  IdentityFitness,
+  IdentityGoal,
+} from './identity';
