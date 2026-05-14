@@ -40,12 +40,40 @@ const ENGLISH_DAY_NAMES = [
 
 /**
  * Normalize a day name to German (the app's display language).
- * Handles: "Monday" → "Montag", "Montag" → "Montag", etc.
+ *
+ * Tolerates case variants and short forms the agent produces:
+ *   "Monday", "monday", "Mon", "Mo." -> "Montag"
+ *   "Montag", "montag" -> "Montag"
+ * Returns the input unchanged when nothing matches.
  */
 function normalizeDay(day: string): string {
-  const idx = ENGLISH_DAY_NAMES.indexOf(day as typeof ENGLISH_DAY_NAMES[number]);
-  if (idx !== -1) return GERMAN_DAY_NAMES[idx];
-  return day;
+  if (!day) return day;
+  const lc = day.trim().toLowerCase();
+
+  // Exact lowercase match against English full names.
+  const engIdx = ENGLISH_DAY_NAMES.findIndex((d) => d.toLowerCase() === lc);
+  if (engIdx !== -1) return GERMAN_DAY_NAMES[engIdx];
+
+  // Exact lowercase match against German full names.
+  const germanIdx = GERMAN_DAY_NAMES.findIndex((d) => d.toLowerCase() === lc);
+  if (germanIdx !== -1) return GERMAN_DAY_NAMES[germanIdx];
+
+  // Short forms: "mon", "mo", "monday." etc - take first two letters.
+  const prefix = lc.replace(/[^a-zäöüß]/g, '').slice(0, 2);
+  const shortMap: Record<string, string> = {
+    mo: 'Montag',
+    di: 'Dienstag',
+    tu: 'Dienstag',
+    mi: 'Mittwoch',
+    we: 'Mittwoch',
+    do: 'Donnerstag',
+    th: 'Donnerstag',
+    fr: 'Freitag',
+    sa: 'Samstag',
+    so: 'Sonntag',
+    su: 'Sonntag',
+  };
+  return shortMap[prefix] ?? day;
 }
 
 /**
