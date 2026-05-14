@@ -21,6 +21,14 @@ interface ChatInputProps {
   isListening: boolean;
   voiceTranscript: string;
   disabled?: boolean;
+  /**
+   * Optional draft text that pre-fills the input without sending. Used
+   * when the user arrives at the chat from a deep-link (e.g. "Im Chat
+   * anpassen" buttons on the identity screen). A new value will overwrite
+   * the current input; pass a stable reference to avoid accidental
+   * resets while the user is typing.
+   */
+  draft?: string;
 }
 
 const MAX_INPUT_LINES = 5;
@@ -71,10 +79,12 @@ export function ChatInput({
   isListening,
   voiceTranscript,
   disabled = false,
+  draft,
 }: ChatInputProps) {
   const [text, setText] = useState('');
   const insets = useSafeAreaInsets();
   const inputRef = useRef<TextInput>(null);
+  const appliedDraftRef = useRef<string | undefined>(undefined);
 
   // Auto-fill from voice transcript
   useEffect(() => {
@@ -82,6 +92,17 @@ export function ChatInput({
       setText(voiceTranscript);
     }
   }, [voiceTranscript]);
+
+  // Apply each new draft exactly once. A subsequent identical `draft`
+  // value (e.g. after a re-render with the same URL param) must NOT
+  // overwrite what the user already typed.
+  useEffect(() => {
+    if (draft !== undefined && draft !== appliedDraftRef.current) {
+      appliedDraftRef.current = draft;
+      setText(draft);
+      inputRef.current?.focus();
+    }
+  }, [draft]);
 
   const handleSend = () => {
     const trimmed = text.trim();

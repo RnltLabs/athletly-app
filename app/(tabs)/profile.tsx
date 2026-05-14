@@ -23,6 +23,7 @@ import {
   LogOut,
   Trash2,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
@@ -396,6 +397,11 @@ export default function ProfileScreen() {
         {/* Einstellungen */}
         <SectionHeader title="Einstellungen" />
         <Card>
+          <SettingsRow
+            icon={Sparkles}
+            label="Wie Athletly dich sieht"
+            onPress={() => router.push('/identity')}
+          />
           <SettingsRow
             icon={Globe}
             label="Sprache"
