@@ -44,3 +44,25 @@ export type {
   IdentityFitness,
   IdentityGoal,
 } from './identity';
+
+export type {
+  Widget,
+  WidgetType,
+  WidgetsResponse,
+  ProfileHeaderProps,
+  HeroGoalProps,
+  StatGridProps,
+  StatItem,
+  TimelineProps,
+  TimelineItem,
+  TimelineItemStatus,
+  ChecklistProps,
+  ChecklistItem,
+  ChecklistItemStatus,
+  ChipListProps,
+  Chip,
+  ChipColor,
+  InfoCardProps,
+  InfoFact,
+  QuoteCardProps,
+} from './widgets';
