@@ -27,7 +27,7 @@ interface SmartSectionCardProps {
 }
 
 const EMPTY_PLACEHOLDER =
-  'Athletly hat dazu noch nichts gelernt. Erzaehl es im Chat.';
+  'Athletly hat dazu noch nichts gelernt. Erzähl es im Chat.';
 
 const DONE_KEYWORDS: readonly string[] = [
   'erledigt',

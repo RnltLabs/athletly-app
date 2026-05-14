@@ -96,7 +96,7 @@ export function GoalHeroCard({
           style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
         >
           <Text className="text-text-muted text-sm leading-5 italic">
-            Du hast Athletly noch kein Ziel verraten. Erzaehl es im Chat.
+            Du hast Athletly noch kein Ziel verraten. Erzähl es im Chat.
           </Text>
         </Pressable>
       </Card>

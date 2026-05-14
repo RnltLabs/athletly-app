@@ -184,7 +184,7 @@ export default function WorkoutSummaryScreen() {
           <Button
             variant="primary"
             size="lg"
-            label="Zurueck zum Plan"
+            label="Zurück zum Plan"
             icon={ArrowLeft}
             onPress={handleBackToPlan}
           />

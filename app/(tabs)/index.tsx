@@ -36,7 +36,7 @@ function getGreeting(): string {
 }
 
 /**
- * Format today's date in German (e.g. "Mittwoch, 5. Maerz").
+ * Format today's date in German (e.g. "Mittwoch, 5. März").
  */
 function formatGermanDate(): string {
   const days = [
@@ -44,7 +44,7 @@ function formatGermanDate(): string {
     'Donnerstag', 'Freitag', 'Samstag',
   ];
   const months = [
-    'Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni',
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
     'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
   ];
   const now = new Date();

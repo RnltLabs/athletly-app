@@ -12,8 +12,8 @@ import { formatGermanLongDate } from '@/components/identity/identityFormat';
  *   0  -> "heute"
  *   1  -> "noch 1 Tag"
  *   N  -> "noch N Tagen" (N > 1)
- *  -1  -> "1 Tag ueberfaellig"
- *  -N  -> "N Tage ueberfaellig"
+ *  -1  -> "1 Tag überfällig"
+ *  -N  -> "N Tage überfällig"
  */
 export function formatCountdownDays(days: number | undefined): string | null {
   if (days === undefined || days === null || !Number.isFinite(days)) {
@@ -25,8 +25,8 @@ export function formatCountdownDays(days: number | undefined): string | null {
     return `noch ${days} Tagen`;
   }
   const past = Math.abs(days);
-  if (past === 1) return '1 Tag ueberfaellig';
-  return `${past} Tage ueberfaellig`;
+  if (past === 1) return '1 Tag überfällig';
+  return `${past} Tage überfällig`;
 }
 
 /**

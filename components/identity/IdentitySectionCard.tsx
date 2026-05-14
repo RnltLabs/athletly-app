@@ -21,7 +21,7 @@ interface IdentitySectionCardProps {
 }
 
 const EMPTY_PLACEHOLDER =
-  'Athletly hat dazu noch nichts gelernt. Erzaehl es im Chat.';
+  'Athletly hat dazu noch nichts gelernt. Erzähl es im Chat.';
 
 export function IdentitySectionCard({
   section,

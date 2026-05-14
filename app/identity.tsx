@@ -129,7 +129,7 @@ export default function IdentityScreen() {
               className="mr-3 rounded-full p-1"
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Zurueck"
+              accessibilityLabel="Zurück"
             >
               <ArrowLeft size={22} color="#FFFFFF" />
             </Pressable>

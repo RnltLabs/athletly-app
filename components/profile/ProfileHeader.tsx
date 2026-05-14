@@ -14,11 +14,11 @@ interface ProfileHeaderProps {
 }
 
 /**
- * Format a date string to German month + year (e.g. "Maerz 2026").
+ * Format a date string to German month + year (e.g. "März 2026").
  */
 function formatMemberSince(dateStr: string): string {
   const months = [
-    'Januar', 'Februar', 'Maerz', 'April', 'Mai', 'Juni',
+    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
     'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember',
   ];
   const date = new Date(dateStr);
